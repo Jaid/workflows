@@ -9,19 +9,19 @@ on:
         description: List of image archs to build, comma separated without spaces
       buildContext:
         type: string
-        required: true
+        required: false
         default: src
       dockerHubUser:
         type: string
-        required: true
+        required: false
         default: jaidchen
       dockerHubRegistry:
         type: string
-        required: true
+        required: false
         default: docker.io
       githubRegistry:
         type: string
-        required: true
+        required: false
         default: ghcr.io
     secrets:
       dockerHubToken:
