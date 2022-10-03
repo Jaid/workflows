@@ -6,13 +6,20 @@ on:
         type: string
         default: linux/amd64,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/riscv64,linux/s390x
         description: List of image archs to build, comma separated without spaces
+      buildContext:
+        type: string
+        default: src
+      dockerHubUser:
+        type: string
+        default: jaidchen
+      dockerHubRegistry:
+        type: string
+        default: docker.io
+      githubRegistry:
+        type: string
+        default: ghcr.io
     secrets:
       dockerHubToken: true
-env:
-  buildContext: src
-  dockerHubUser: jaidchen
-  dockerHubRegistry: docker.io
-  githubRegistry: ghcr.io
 jobs:
   job:
     runs-on: ubuntu-latest
@@ -23,22 +30,22 @@ jobs:
       - name: Set name
         id: dockerHubRef
         shell: bash
-        run: repoName=${{ github.event.repository.name }} && shortName=${repoName##docker-} && printf '::set-output name=ref::%s/%s\n::set-output name=shortName::%s' ${{ env.dockerHubUser }} $shortName $shortName
+        run: repoName=${{ github.event.repository.name }} && shortName=${repoName##docker-} && printf '::set-output name=ref::%s/%s\n::set-output name=shortName::%s' ${{ inputs.dockerHubUser }} $shortName $shortName
       - name: Checkout
         uses: actions/checkout@v3
       # - name: Set up qemu
       #   uses: docker/setup-qemu-action@v2
       # - name: Set up buildx
       #   uses: docker/setup-buildx-action@v2
-      # - name: Login to ${{ env.dockerHubRegistry }}
+      # - name: Login to ${{ inputs.dockerHubRegistry }}
       #   uses: docker/login-action@v2
       #   with:
-      #     username: ${{ env.dockerHubUser }}
+      #     username: ${{ inputs.dockerHubUser }}
       #     password: ${{ secrets.dockerHubToken }}
-      # - name: Login to ${{ env.githubRegistry }}
+      # - name: Login to ${{ inputs.githubRegistry }}
       #   uses: docker/login-action@v2
       #   with:
-      #     registry: ${{ env.githubRegistry }}
+      #     registry: ${{ inputs.githubRegistry }}
       #     username: ${{ github.actor }}
       #     password: ${{ secrets.GITHUB_TOKEN }}
       # - name: Extract Docker metadata
@@ -46,7 +53,7 @@ jobs:
       #   uses: docker/metadata-action@v4.0.1
       #   with:
       #     images: |
-      #       ${{ env.githubRegistry }}/${{ github.repository }}
+      #       ${{ inputs.githubRegistry }}/${{ github.repository }}
       #       ${{ steps.dockerHubRef.outputs.ref }}
       #     labels: |
       #       maintainer=${{ github.actor }}
@@ -62,7 +69,7 @@ jobs:
       #   uses: docker/build-push-action@v3
       #   with:
       #     push: true
-      #     context: ${{ env.buildContext }}
+      #     context: ${{ inputs.buildContext }}
       #     platforms: ${{ inputs.arch }}
       #     tags: ${{ steps.meta.outputs.tags }}
       #     labels: ${{ steps.meta.outputs.labels }}
