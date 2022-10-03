@@ -24,7 +24,8 @@ on:
         required: true
         default: ghcr.io
     secrets:
-      dockerHubToken: true
+      dockerHubToken:
+        required: true
 jobs:
   job:
     runs-on: ubuntu-latest
