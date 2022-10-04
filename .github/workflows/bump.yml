@@ -1,0 +1,27 @@
+name: bump
+on:
+  workflow_call:
+    inputs:
+      bumpAmount:
+        type: string
+        required: false
+        default: patch
+        description: Semver segment to bump (→ v[major].[minor].[patch])
+      releaseBranch:
+        type: string
+        required: false
+        default: main
+        description: The branch that will create release tags
+jobs:
+  job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: createTag
+        uses: anothrNick/github-tag-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
+          DEFAULT_BUMP: ${{ inputs.bumpAmount }}
+          RELEASE_BRANCHES: ${{ inputs.releaseBranch }}
