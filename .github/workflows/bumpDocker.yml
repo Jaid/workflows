@@ -16,9 +16,6 @@ on:
         type: string
         required: false
         default: jaidchen
-    secrets:
-      dockerHubToken:
-        required: true
 jobs:
   job:
     needs: prepare
