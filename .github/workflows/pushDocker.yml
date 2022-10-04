@@ -70,7 +70,6 @@ jobs:
             type=schedule,pattern=nightly
             type=schedule,pattern={{date 'YYYYMMDD'}}
             type=sha,format=long
-            type=raw,value=edge
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
