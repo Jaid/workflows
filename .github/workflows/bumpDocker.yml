@@ -29,7 +29,7 @@ jobs:
       - name: setName
         id: setName
         shell: bash
-        run: repoName=${{ github.event.repository.name }} && shortName=${repoName##docker-} && printf '::set-output name=ref::%s/%s\n::set-output name=shortName::%s' ${{ inputs.dockerHubUser }}
+        run: repoName=${{ github.event.repository.name }} && shortName=${repoName##docker-} && printf '::set-output name=ref::%s/%s\n::set-output name=shortName::%s' ${{ inputs.dockerHubUser }} $shortName $shortName
       - name: createTag
         id: createTag
         uses: anothrNick/github-tag-action@v1
