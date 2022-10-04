@@ -49,13 +49,7 @@ jobs:
         id: queryDockerHub
         shell: bash
         run: |
-          curl --version
-          docker version
-          curlVersion=7.85.0
-          curlTag=7_85_0
-          curl --location --fail --show-error https://github.com/curl/curl/releases/download/curl-$curlTag/curl-$curlVersion.tar.gz ~/curl.tgz
-          tar -x -z -f ~/curl.tgz
-          json=$(curl --silent --retry 30 --retry-delay 60 --retry-all-errors --location https://hub.docker.com/v2/namespaces/${{ inputs.dockerHubUser }}/repositories/${{ steps.setName.outputs.shortName }}/tags/${{ steps.convertGitTagToDockerTag.outputs.dockerTag }})
+          json=$(docker run --rm curlimages/curl:7.85.0 --silent --retry 30 --retry-delay 60 --retry-all-errors --location https://hub.docker.com/v2/namespaces/${{ inputs.dockerHubUser }}/repositories/${{ steps.setName.outputs.shortName }}/tags/${{ steps.convertGitTagToDockerTag.outputs.dockerTag }})
           size=$(jq --raw-output '.full_size'<<<"$json")
           digest=$(jq --raw-output '.images[0].digest | ltrimstr("sha256:")' <<<"$json")
           printf '::set-output name=size::%s\n::set-output name=digest::%s' "$size" "$digest"
