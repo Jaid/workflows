@@ -18,7 +18,6 @@ on:
         default: jaidchen
 jobs:
   job:
-    needs: prepare
     runs-on: ubuntu-latest
     permissions:
       contents: write
