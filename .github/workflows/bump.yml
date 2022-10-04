@@ -12,18 +12,38 @@ on:
         required: false
         default: main
         description: The branch that will create release tags
+      releaseTitle:
+        type: string
+        required: false
+        default: '{0}/{1} {2}'
+        description: 'Formats: {0} = repoOwner, {1} = repoName, {2} = tag'
+      releaseBody:
+        type: string
+        required: false
+        default: 💕
+        description: '{0} = repoOwner, {1} = repoName, {2} = tag'
 jobs:
   job:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: createTag
+        id: createTag
         uses: anothrNick/github-tag-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: true
           DEFAULT_BUMP: ${{ inputs.bumpAmount }}
           RELEASE_BRANCHES: ${{ inputs.releaseBranch }}
+      - name: updateRelease
+        uses: ncipollo/release-action@v1.11.0
+        with:
+          allowUpdates: true
+          name: ${{ format(inputs.releaseTitle, github.repository_owner, github.repository, steps.createTag.outputs.new_tag) }}
+          body: ${{ format(inputs.releaseBody, github.repository_owner, github.repository, steps.createTag.outputs.new_tag) }}
+          tag: ${{ steps.createTag.outputs.new_tag }}
