@@ -38,10 +38,14 @@ jobs:
           WITH_V: true
           DEFAULT_BUMP: ${{ inputs.bumpAmount }}
           RELEASE_BRANCHES: ${{ inputs.releaseBranch }}
+      - name: convertGitTagToDockerTag
+        id: convertGitTagToDockerTag
+        shell: bash
+        run: gitTag=${{ steps.createTag.outputs.new_tag }} && dockerTag=${gitTag##v} && printf '::set-output name=dockerTag::%s' $dockerTag
       - name: queryDockerHub
         id: queryDockerHub
         shell: bash
-        run: json=$(curl --silent --retry 3 --location https://hub.docker.com/v2/namespaces/${{ inputs.dockerHubUser }}/repositories/${{ steps.setName.outputs.shortName }}/tags/${{ steps.createTag.outputs.new_tag }}) && size=$(jq --raw-output '.full_size'<<<"$json") && digest=$(jq --raw-output '.images[0].digest | ltrimstr("sha256:")' <<<"$json") && printf '::set-output name=size::%s\n::set-output name=digest::%s' "$size" "$digest"
+        run: json=$(curl --silent --retry 30 --retry-delay 60 --retry-all-errors --location https://hub.docker.com/v2/namespaces/${{ inputs.dockerHubUser }}/repositories/${{ steps.setName.outputs.shortName }}/tags/${{ steps.convertGitTagToDockerTag.outputs.dockerTag }}) && size=$(jq --raw-output '.full_size'<<<"$json") && digest=$(jq --raw-output '.images[0].digest | ltrimstr("sha256:")' <<<"$json") && printf '::set-output name=size::%s\n::set-output name=digest::%s' "$size" "$digest"
       - name: updateRelease
         uses: ncipollo/release-action@v1.11.0
         with:
@@ -49,5 +53,5 @@ jobs:
           name: 🐋 ${{ steps.setName.outputs.ref }} ${{ steps.createTag.outputs.new_tag }}
           body: |
             # ${{ steps.setName.outputs.ref }} ${{ steps.createTag.outputs.new_tag }}
-            ![https://img.shields.io/badge/DockerHub-${{ steps.createTag.outputs.new_tag }}-1c90ed?logo=docker&logoColor=white&style=flat-square](https://hub.docker.com/layers/${{ inputs.dockerHubUser }}/${{ steps.setName.outputs.shortName }}/${{ steps.createTag.outputs.new_tag }}/images/sha256-${{ steps.queryDockerHub.outputs.digest }})'
+            ![https://img.shields.io/badge/DockerHub-${{ steps.convertGitTagToDockerTag.outputs.dockerTag }}-1c90ed?logo=docker&logoColor=white&style=flat-square](https://hub.docker.com/layers/${{ inputs.dockerHubUser }}/${{ steps.setName.outputs.shortName }}/${{ steps.convertGitTagToDockerTag.outputs.dockerTag }}/images/sha256-${{ steps.queryDockerHub.outputs.digest }})'
           tag: ${{ steps.createTag.outputs.new_tag }}
