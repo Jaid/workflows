@@ -42,9 +42,6 @@ jobs:
         id: convertGitTagToDockerTag
         shell: bash
         run: gitTag=${{ steps.createTag.outputs.new_tag }} && dockerTag=${gitTag##v} && printf '::set-output name=dockerTag::%s' $dockerTag
-      - name: upgradeCurl
-        shell: bash
-        run: sudo apt-get --option Acquire::Retries=60 --option Acquire::http::Timeout=180 --yes update && sudo apt-get --option Acquire::Retries=60 --option Acquire::http::Timeout=180 --yes install curl
       - name: queryDockerHub
         id: queryDockerHub
         shell: bash
