@@ -23,6 +23,18 @@ on:
         type: string
         required: false
         default: ghcr.io
+      baseTags:
+        type: string
+        required: false
+        default: |
+          type=ref,event=branch
+          type=schedule,pattern=nightly
+          type=schedule,pattern={{date 'YYYYMMDD'}}
+          type=sha,format=long
+      additionalTags:
+        type: string
+        required: false
+        default: ''
     secrets:
       dockerHubToken:
         required: true
@@ -80,11 +92,8 @@ jobs:
             org.opencontainers.image.vendor=${{ github.actor }}
             org.opencontainers.image.title=${{ steps.dockerHubRef.outputs.shortName }}
           tags: |
-            type=ref,event=branch
-            type=schedule,pattern=nightly
-            type=schedule,pattern={{date 'YYYYMMDD'}}
-            type=sha,format=long
-            type=semver,pattern={{version}}
+            ${{ inputs.baseTags }}
+            ${{ inputs.additionalTags }}
       - name: buildAndPush
         id: buildAndPush
         uses: docker/build-push-action@v3
