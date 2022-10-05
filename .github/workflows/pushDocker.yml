@@ -27,10 +27,14 @@ on:
       dockerHubToken:
         required: true
     outputs:
-      meta: ${{ jobs.job.outputs.meta }}
-      digest: ${{ jobs.job.outputs.digest }}
-      imageName: ${{ jobs.job.outputs.imageName }}
-      imageSlug: ${{ jobs.job.outputs.imageSlug }}
+      meta:
+        value: ${{ jobs.job.outputs.meta }}
+      digest:
+        value: ${{ jobs.job.outputs.digest }}
+      imageName:
+        value: ${{ jobs.job.outputs.imageName }}
+      imageSlug:
+        value: ${{ jobs.job.outputs.imageSlug }}
 jobs:
   job:
     runs-on: ubuntu-latest
