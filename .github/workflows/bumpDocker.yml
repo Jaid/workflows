@@ -84,9 +84,10 @@ jobs:
         shell: bash
         run: |
           json=$(curl --silent --fail --retry 30 --retry-max-time 1800 --location https://hub.docker.com/v2/namespaces/${{ inputs.dockerHubUser }}/repositories/${{ needs.build.outputs.imageName }}/tags/${{ needs.prepare.outputs.dockerTag }})
-          size=$(jq --raw-output '.full_size'<<<"$json")
+          size=$(jq --raw-output '.images[0].size' <<<"$json" | numfmt --to=si --suffix=b)
           digest=$(jq --raw-output '.images[0].digest | ltrimstr("sha256:")' <<<"$json")
-          printf '::set-output name=size::%s\n::set-output name=digest::%s' "$size" "$digest"
+          arch=$(jq --raw-output '.images[0].architecture' <<<"$json")
+          printf '::set-output name=size::%s\n::set-output name=digest::%s\n::set-output name=arch::%s' "$size" "$digest" "$arch"
       - name: updateRelease
         uses: ncipollo/release-action@v1.11.0
         with:
@@ -95,4 +96,4 @@ jobs:
           name: ${{ needs.build.outputs.imageSlug }} ${{ needs.prepare.outputs.repoTag }}
           body: |
             # 🐋 ${{ needs.build.outputs.imageSlug }} ${{ needs.prepare.outputs.repoTag }}
-            [![DockerHub version reference](https://img.shields.io/badge/DockerHub-${{ needs.prepare.outputs.dockerTag }}-1c90ed?logo=docker&logoColor=white&style=flat-square)](https://hub.docker.com/layers/${{ needs.build.outputs.imageSlug }}/${{ needs.prepare.outputs.dockerTag }}/images/sha256-${{ steps.queryDockerHub.outputs.digest }})
+            [![DockerHub version reference](https://img.shields.io/badge/DockerHub-${{ needs.prepare.outputs.dockerTag }}-1c90ed?logo=docker&logoColor=white&style=flat-square)](https://hub.docker.com/layers/${{ needs.build.outputs.imageSlug }}/${{ needs.prepare.outputs.dockerTag }}/images/sha256-${{ steps.queryDockerHub.outputs.digest }}) [![DockerHub version size](https://img.shields.io/badge/${{ needs.prepare.outputs.repoTag }} size-${{ steps.queryDockerHub.outputs.size }}-1c90ed?logo=docker&logoColor=white&style=flat-square)](https://hub.docker.com/layers/${{ needs.build.outputs.imageSlug }}/${{ needs.prepare.outputs.dockerTag }}/images/sha256-${{ steps.queryDockerHub.outputs.digest }})
