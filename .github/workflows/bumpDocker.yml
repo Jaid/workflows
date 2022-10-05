@@ -70,7 +70,9 @@ jobs:
       dockerHubUser: ${{ inputs.dockerHubUser }}
       dockerHubRegistry: ${{ inputs.dockerHubRegistry }}
       githubRegistry: ${{ inputs.githubRegistry }}
-      additionalTags: ${{ needs.prepare.outputs.dockerTag }}
+      additionalTags: |
+        latest
+        ${{ needs.prepare.outputs.dockerTag }}
     secrets:
       dockerHubToken: ${{ secrets.dockerHubToken }}
   finish:
