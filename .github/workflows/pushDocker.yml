@@ -26,14 +26,24 @@ on:
     secrets:
       dockerHubToken:
         required: true
+    outputs:
+      meta: ${{ jobs.job.outputs.meta }}
+      digest: ${{ jobs.job.outputs.digest }}
+      imageName: ${{ jobs.job.outputs.imageName }}
+      imageSlug: ${{ jobs.job.outputs.imageSlug }}
 jobs:
   job:
     runs-on: ubuntu-latest
     permissions:
       packages: write
       contents: read
+    outputs:
+      meta: ${{ steps.buildAndPush.outputs.metadata }}
+      digest: ${{ steps.buildAndPush.outputs.digest }}
+      imageSlug: ${{ steps.dockerHubRef.outputs.ref }}
+      imageName: ${{ steps.dockerHubRef.outputs.shortName }}
     steps:
-      - name: Set name
+      - name: dockerHubRef
         id: dockerHubRef
         shell: bash
         run: repoName=${{ github.event.repository.name }} && shortName=${repoName##docker-} && printf '::set-output name=ref::%s/%s\n::set-output name=shortName::%s' ${{ inputs.dockerHubUser }} $shortName $shortName
@@ -71,7 +81,8 @@ jobs:
             type=schedule,pattern={{date 'YYYYMMDD'}}
             type=sha,format=long
             type=semver,pattern={{version}}
-      - name: Build and push
+      - name: buildAndPush
+        id: buildAndPush
         uses: docker/build-push-action@v3
         with:
           push: true

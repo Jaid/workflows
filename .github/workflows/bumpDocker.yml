@@ -12,24 +12,42 @@ on:
         required: false
         default: main
         description: The branch that will create release tags
+      arch:
+        type: string
+        required: false
+        default: linux/amd64,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/riscv64,linux/s390x
+        description: List of image archs to build, comma separated without spaces
+      buildContext:
+        type: string
+        required: false
+        default: src
       dockerHubUser:
         type: string
         required: false
         default: jaidchen
+      dockerHubRegistry:
+        type: string
+        required: false
+        default: docker.io
+      githubRegistry:
+        type: string
+        required: false
+        default: ghcr.io
+    secrets:
+      dockerHubToken:
+        required: true
 jobs:
-  job:
+  prepare:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      dockerTag: ${{ steps.convertGitTagToDockerTag.outputs.dockerTag }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: setName
-        id: setName
-        shell: bash
-        run: repoName=${{ github.event.repository.name }} && shortName=${repoName##docker-} && printf '::set-output name=ref::%s/%s\n::set-output name=shortName::%s' ${{ inputs.dockerHubUser }} $shortName $shortName
       - name: createTag
         id: createTag
         uses: anothrNick/github-tag-action@v1
@@ -42,11 +60,28 @@ jobs:
         id: convertGitTagToDockerTag
         shell: bash
         run: gitTag=${{ steps.createTag.outputs.new_tag }} && dockerTag=${gitTag##v} && printf '::set-output name=dockerTag::%s' $dockerTag
+  build: # outputs imageSlug, imageName, digest, metadata
+    needs: prepare
+    uses: jaid/workflows/.github/workflows/pushDocker.yml@main
+    with:
+      arch: ${{ inputs.arch }}
+      buildContext: ${{ inputs.buildContext }}
+      dockerHubUser: ${{ inputs.dockerHubUser }}
+      dockerHubRegistry: ${{ inputs.dockerHubRegistry }}
+      githubRegistry: ${{ inputs.githubRegistry }}
+    secrets:
+      dockerHubToken: ${{ secrets.dockerHubToken }}
+  finish:
+    needs:
+      - prepare
+      - build
+    runs-on: ubuntu-latest
+    steps:
       - name: queryDockerHub
         id: queryDockerHub
         shell: bash
         run: |
-          json=$(docker run --rm curlimages/curl:7.85.0 --fail --retry 30 --retry-max-time 1800 --retry-all-errors --location https://hub.docker.com/v2/namespaces/${{ inputs.dockerHubUser }}/repositories/${{ steps.setName.outputs.shortName }}/tags/${{ steps.convertGitTagToDockerTag.outputs.dockerTag }})
+          json=$(curl --silent --fail --retry 30 --retry-max-time 1800 --location https://hub.docker.com/v2/namespaces/${{ inputs.dockerHubUser }}/repositories/${{ needs.build.outputs.imageName }}/tags/${{ needs.prepare.outputs.dockerTag }})
           size=$(jq --raw-output '.full_size'<<<"$json")
           digest=$(jq --raw-output '.images[0].digest | ltrimstr("sha256:")' <<<"$json")
           printf '::set-output name=size::%s\n::set-output name=digest::%s' "$size" "$digest"
@@ -54,8 +89,8 @@ jobs:
         uses: ncipollo/release-action@v1.11.0
         with:
           allowUpdates: true
-          name: 🐋 ${{ steps.setName.outputs.ref }} ${{ steps.createTag.outputs.new_tag }}
+          name: 🐋 ${{ needs.build.outputs.imageSlug }} ${{ steps.createTag.outputs.new_tag }}
           body: |
-            # ${{ steps.setName.outputs.ref }} ${{ steps.createTag.outputs.new_tag }}
-            ![https://img.shields.io/badge/DockerHub-${{ steps.convertGitTagToDockerTag.outputs.dockerTag }}-1c90ed?logo=docker&logoColor=white&style=flat-square](https://hub.docker.com/layers/${{ inputs.dockerHubUser }}/${{ steps.setName.outputs.shortName }}/${{ steps.convertGitTagToDockerTag.outputs.dockerTag }}/images/sha256-${{ steps.queryDockerHub.outputs.digest }})'
+            # ${{ needs.build.outputs.imageSlug }} ${{ steps.createTag.outputs.new_tag }}
+            ![https://img.shields.io/badge/DockerHub-${{ needs.prepare.outputs.dockerTag }}-1c90ed?logo=docker&logoColor=white&style=flat-square](https://hub.docker.com/layers/${{ needs.build.outputs.imageSlug }}/${{ needs.prepare.outputs.dockerTag }}/images/sha256-${{ steps.queryDockerHub.outputs.digest }})'
           tag: ${{ steps.createTag.outputs.new_tag }}
