@@ -42,6 +42,7 @@ jobs:
     permissions:
       contents: write
     outputs:
+      repoTag: ${{ steps.createTag.outputs.new_tag }}
       dockerTag: ${{ steps.convertGitTagToDockerTag.outputs.dockerTag }}
     steps:
       - name: checkout
@@ -94,4 +95,4 @@ jobs:
           body: |
             # ${{ needs.build.outputs.imageSlug }} ${{ steps.createTag.outputs.new_tag }}
             ![https://img.shields.io/badge/DockerHub-${{ needs.prepare.outputs.dockerTag }}-1c90ed?logo=docker&logoColor=white&style=flat-square](https://hub.docker.com/layers/${{ needs.build.outputs.imageSlug }}/${{ needs.prepare.outputs.dockerTag }}/images/sha256-${{ steps.queryDockerHub.outputs.digest }})'
-          tag: ${{ steps.createTag.outputs.new_tag }}
+          tag: ${{ needs.prepare.outputs.repoTag }}
