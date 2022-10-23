@@ -94,6 +94,11 @@ jobs:
           tags: |
             ${{ inputs.baseTags }}
             ${{ inputs.additionalTags }}
+      - name: getArch
+        shell: bash
+        run: if [[ -f arch.lines ]]; then readarray -t archs < arch.lines; IFS=, eval 'arch="${archs[*]}"'; else; arch=$defaultArch; fi; printf '::set-output name=arch::%s' "$arch"
+        env:
+          defaultArch: ${{ inputs.arch }}
       - name: buildAndPush
         id: buildAndPush
         uses: docker/build-push-action@v3
