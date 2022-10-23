@@ -60,7 +60,7 @@ jobs:
       - name: convertGitTagToDockerTag
         id: convertGitTagToDockerTag
         shell: bash
-        run: gitTag=${{ steps.createTag.outputs.new_tag }} && dockerTag=${gitTag##v} && printf '::set-output name=dockerTag::%s' $dockerTag
+        run: gitTag=${{ steps.createTag.outputs.new_tag }} && dockerTag=${gitTag##v} && printf 'dockerTag=%s' $dockerTag > $GITHUB_OUTPUT
   build: # outputs imageSlug, imageName, digest, metadata
     needs: prepare
     uses: jaid/workflows/.github/workflows/pushDocker.yml@main
@@ -89,7 +89,7 @@ jobs:
           size=$(jq --raw-output '.images[0].size' <<<"$json" | numfmt --to=si --suffix=b)
           digest=$(jq --raw-output '.images[0].digest | ltrimstr("sha256:")' <<<"$json")
           arch=$(jq --raw-output '.images[0].architecture' <<<"$json")
-          printf '::set-output name=size::%s\n::set-output name=digest::%s\n::set-output name=arch::%s' "$size" "$digest" "$arch"
+          printf 'size=%s\ndigest=%s\n=arch=%s' "$size" "$digest" "$arch" > $GITHUB_OUTPUT
       - name: updateRelease
         uses: ncipollo/release-action@v1.11.0
         with:
