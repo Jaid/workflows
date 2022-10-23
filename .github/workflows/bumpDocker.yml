@@ -89,7 +89,7 @@ jobs:
           size=$(jq --raw-output '.images[0].size' <<<"$json" | numfmt --to=si --suffix=b)
           digest=$(jq --raw-output '.images[0].digest | ltrimstr("sha256:")' <<<"$json")
           arch=$(jq --raw-output '.images[0].architecture' <<<"$json")
-          printf 'size=%s\ndigest=%s\n=arch=%s' "$size" "$digest" "$arch" > $GITHUB_OUTPUT
+          printf 'size=%s\ndigest=%s\narch=%s' "$size" "$digest" "$arch" > $GITHUB_OUTPUT
       - name: updateRelease
         uses: ncipollo/release-action@v1.11.0
         with:
