@@ -95,6 +95,7 @@ jobs:
             ${{ inputs.baseTags }}
             ${{ inputs.additionalTags }}
       - name: getArch
+        id: getArch
         shell: bash
         run: if [[ -f arch.lines ]]; then readarray -t archs < arch.lines; function joinBy { local IFS="$1"; shift; echo "$*"; }; arch=$(joinBy , "${archs[@]}"); else arch=$defaultArch; fi; printf 'arch=%s' "$arch" > $GITHUB_OUTPUT
         env:
