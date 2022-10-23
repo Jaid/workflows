@@ -96,7 +96,7 @@ jobs:
             ${{ inputs.additionalTags }}
       - name: getArch
         shell: bash
-        run: if [[ -f arch.lines ]]; then readarray -t archs < arch.lines; IFS=, eval 'arch="${archs[*]}"'; else arch=$defaultArch; fi; printf 'arch=%s' "$arch" > $GITHUB_OUTPUT
+        run: ls -lah . ; if [[ -f arch.lines ]]; then readarray -t archs < arch.lines; IFS=, eval 'arch="${archs[*]}"'; else arch=$defaultArch; fi; printf 'arch=%s' "$arch" > $GITHUB_OUTPUT
         env:
           defaultArch: ${{ inputs.arch }}
       - name: buildAndPush
