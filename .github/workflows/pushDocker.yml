@@ -114,9 +114,9 @@ jobs:
             ${{ inputs.baseTags }}
             ${{ inputs.additionalTags }}
           flavor: |
-            latest={{ inputs.flavorLatest }}
-            prefix={{ inputs.flavorPrefix }}
-            suffix={{ inputs.flavorSuffix }}
+            latest=${{ inputs.flavorLatest }}
+            prefix=${{ inputs.flavorPrefix }}
+            suffix=${{ inputs.flavorSuffix }}
       - name: getArch
         id: getArch
         shell: bash
