@@ -30,7 +30,11 @@ on:
           type=ref,event=branch
           type=schedule,pattern=nightly
           type=schedule,pattern={{date 'YYYYMMDD'}}
-          type=sha,format=long
+      shaTags:
+        type: boolean
+        required: false
+        default: false
+        description: If true, create a docker image tag named after the commit’s SHA hash (good for persistence and debugging, but will produce a lot of clutter)
       additionalTags:
         type: string
         required: false
@@ -121,6 +125,8 @@ jobs:
           tags: |
             ${{ inputs.baseTags }}
             ${{ inputs.additionalTags }}
+            ${{ fromJSON('["type=sha,format=long", ""]')[inputs.shaTags == true] }}
+          # above hack from here: https://github.com/orgs/community/discussions/25725#discussioncomment-3248924
           flavor: |
             latest=${{ inputs.flavorLatest }}
             prefix=${{ inputs.flavorPrefix }}
