@@ -5,7 +5,7 @@ on:
       arch:
         type: string
         required: false
-        default: linux/amd64,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/riscv64,linux/s390x
+        default: ''
         description: List of image archs to build, comma separated without spaces
       buildContext:
         type: string
@@ -32,6 +32,18 @@ on:
           type=schedule,pattern={{date 'YYYYMMDD'}}
           type=sha,format=long
       additionalTags:
+        type: string
+        required: false
+        default: ''
+      flavorLatest:
+        type: string
+        required: false
+        default: auto
+      flavorPrefix:
+        type: string
+        required: false
+        default: ''
+      flavorSuffix:
         type: string
         required: false
         default: ''
@@ -94,12 +106,28 @@ jobs:
           tags: |
             ${{ inputs.baseTags }}
             ${{ inputs.additionalTags }}
+          flavor: |
+            latest={{ inputs.flavorLatest }}
+            prefix={{ inputs.flavorPrefix }}
+            suffix={{ inputs.flavorSuffix }}
       - name: getArch
         id: getArch
         shell: bash
-        run: if [[ -f arch.lines ]]; then readarray -t archs < arch.lines; function joinBy { local IFS="$1"; shift; echo "$*"; }; arch=$(joinBy , "${archs[@]}"); else arch=$defaultArch; fi; printf 'arch=%s' "$arch" > $GITHUB_OUTPUT
+        run: |
+          if [[ -n $givenArch ]]; then
+            arch=$givenArch
+          elif [[ -f arch.lines ]]; then
+            readarray -t archs < arch.lines
+            function joinBy {
+              local IFS="$1"; shift; echo "$*"
+            }
+            arch=$(joinBy , "${archs[@]}");
+          else
+           arch=linux/amd64,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/riscv64,linux/s390x
+          fi
+          printf 'arch=%s' "$arch" > $GITHUB_OUTPUT
         env:
-          defaultArch: ${{ inputs.arch }}
+          givenArch: ${{ inputs.arch }}
       - name: buildAndPush
         id: buildAndPush
         uses: docker/build-push-action@v3
