@@ -45,6 +45,14 @@ on:
         type: string
         required: false
         default: ''
+      # flavorPrefixLatest:
+      #   type: string
+      #   required: false
+      #   default: auto
+      # flavorSuffixLatest:
+      #   type: string
+      #   required: false
+      #   default: auto
       buildArgs:
         type: string
         required: false
@@ -95,6 +103,8 @@ jobs:
       flavorLatest: ${{ inputs.flavorLatest }}
       flavorPrefix: ${{ inputs.flavorPrefix }}
       flavorSuffix: ${{ inputs.flavorSuffix }}
+      # flavorPrefixLatest: ${{ inputs.flavorPrefixLatest }}
+      # flavorSuffixLatest: ${{ inputs.flavorSuffixLatest }}
       buildArgs: ${{ inputs.buildArgs }}
     secrets:
       dockerHubToken: ${{ secrets.dockerHubToken }}

@@ -47,6 +47,14 @@ on:
         type: string
         required: false
         default: ''
+      # flavorPrefixLatest:
+      #   type: string
+      #   required: false
+      #   default: auto
+      # flavorSuffixLatest:
+      #   type: string
+      #   required: false
+      #   default: auto
       buildArgs:
         type: string
         required: false
@@ -117,6 +125,8 @@ jobs:
             latest=${{ inputs.flavorLatest }}
             prefix=${{ inputs.flavorPrefix }}
             suffix=${{ inputs.flavorSuffix }}
+          # prefixLatest=${{ inputs.flavorPrefixLatest }}
+          # suffixLatest=${{ inputs.flavorSuffixLatest }}
       - name: getArch
         id: getArch
         shell: bash
