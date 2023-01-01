@@ -15,7 +15,7 @@ on:
       arch:
         type: string
         required: false
-        default: linux/amd64,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/riscv64,linux/s390x
+        default: ''
         description: List of image archs to build, comma separated without spaces
       buildContext:
         type: string
@@ -33,6 +33,18 @@ on:
         type: string
         required: false
         default: ghcr.io
+      flavorLatest:
+        type: string
+        required: false
+        default: auto
+      flavorPrefix:
+        type: string
+        required: false
+        default: ''
+      flavorSuffix:
+        type: string
+        required: false
+        default: ''
     secrets:
       dockerHubToken:
         required: true
@@ -60,7 +72,10 @@ jobs:
       - name: convertGitTagToDockerTag
         id: convertGitTagToDockerTag
         shell: bash
-        run: gitTag=${{ steps.createTag.outputs.new_tag }} && dockerTag=${gitTag##v} && printf 'dockerTag=%s' $dockerTag > $GITHUB_OUTPUT
+        run: |
+          gitTag=${{ steps.createTag.outputs.new_tag }}
+          dockerTag=${gitTag##v}
+          printf 'dockerTag=%s' "$dockerTag" > $GITHUB_OUTPUT
   build: # outputs imageSlug, imageName, digest, metadata
     needs: prepare
     uses: jaid/workflows/.github/workflows/pushDocker.yml@main
@@ -73,6 +88,9 @@ jobs:
       additionalTags: |
         latest
         ${{ needs.prepare.outputs.dockerTag }}
+      flavorLatest: ${{ inputs.flavorLatest }}
+      flavorPrefix: ${{ inputs.flavorPrefix }}
+      flavorSuffix: ${{ inputs.flavorSuffix }}
     secrets:
       dockerHubToken: ${{ secrets.dockerHubToken }}
   finish:
