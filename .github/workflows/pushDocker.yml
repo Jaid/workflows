@@ -47,6 +47,10 @@ on:
         type: string
         required: false
         default: ''
+      buildArgs:
+        type: string
+        required: false
+        default: ''
     secrets:
       dockerHubToken:
         required: true
@@ -142,3 +146,4 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ steps.dockerHubRef.outputs.ref }}:buildcache
           cache-to: type=registry,ref=${{ steps.dockerHubRef.outputs.ref }}:buildcache,mode=max
+          build-args: ${{ inputs.buildArgs }}
