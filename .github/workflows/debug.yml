@@ -11,7 +11,7 @@ jobs:
         shell: bash
         run: |
           keys=("${!env[@]}")
-          sorted_keys=($(printf '%s\n' "${keys[@]}" | sort -u))
-          for key in "${sorted_keys[@]}"; do
+          sortedKeys=($(printf '%s\n' "${keys[@]}" | sort -u))
+          for key in "${sortedKeys[@]}"; do
             printf '%s=%s\n' "$key" "${env[$key]}"
           done
