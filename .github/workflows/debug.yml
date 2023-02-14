@@ -1,5 +1,6 @@
 name: bump
 on:
+  workflow_call: {}
 jobs:
   job:
     runs-on: ubuntu-latest
