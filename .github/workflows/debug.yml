@@ -1,0 +1,19 @@
+name: bump
+on:
+jobs:
+  job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: env
+        shell: bash
+        run: |
+          keys=()
+          for key in "${!env[@]}"; do
+            keys+=("$key")
+          done
+          sorted_keys=($(echo "${keys[@]}" | tr ' ' '\n' | sort))
+          for key in "${sorted_keys[@]}"; do
+            echo "$key=${env[$key]}"
+          done
