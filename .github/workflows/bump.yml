@@ -34,6 +34,18 @@ on:
       newTag:
         description: Name of the newly created git tag
         value: ${{ jobs.job.outputs.newTag }}
+      releaseId:
+        description: GitHub API ID of newly created release
+        value: ${{ jobs.job.outputs.releaseId }}
+      releaseUrl:
+        description: HTML link to newly created release
+        value: ${{ jobs.job.outputs.releaseUrl }}
+      releaseTitle:
+        description: Title of the newly created release with string interpolation applied
+        value: ${{ jobs.job.outputs.releaseTitle }}
+      releaseBody:
+        description: Description of the newly created release with string interpolation applied
+        value: ${{ jobs.job.outputs.releaseBody }}
 jobs:
   job:
     runs-on: ubuntu-latest
@@ -63,3 +75,7 @@ jobs:
     outputs:
       oldTag: ${{ steps.createTag.outputs.old_tag }}
       newTag: ${{ steps.createTag.outputs.new_tag }}
+      releaseId: ${{ steps.updateRelease.outputs.id }}
+      releaseUrl: ${{ steps.updateRelease.outputs.html_url }}
+      releaseTitle: ${{ format(inputs.releaseTitle, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
+      releaseBody: ${{ format(inputs.releaseBody, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
