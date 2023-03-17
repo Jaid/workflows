@@ -22,6 +22,11 @@ on:
         required: false
         default: '[{2}](https://github.com/{0}/{1}/tree/{2}) [→](https://github.com/{0}/{1}/compare/{2}...{3}) [{3}](https://github.com/{0}/{1}/tree/{3})'
         description: '{0} = repoOwner, {1} = repoName, {2} = oldTag, {3} = newTag'
+      makeLatest:
+        type: string
+        required: false
+        default: 'true'
+        description: '{0} = repoOwner, {1} = repoName, {2} = oldTag, {3} = newTag'
     outputs:
       oldTag:
         description: Name of the old tag used for relative bumping
@@ -54,7 +59,7 @@ jobs:
           name: ${{ format(inputs.releaseTitle, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
           body: ${{ format(inputs.releaseBody, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
           tag: ${{ steps.createTag.outputs.new_tag }}^
-          makeLatest: true
+          makeLatest: ${{ inputs.makeLatest }}
     outputs:
       oldTag: ${{ steps.createTag.outputs.old_tag }}
       newTag: ${{ steps.createTag.outputs.new_tag }}
