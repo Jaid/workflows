@@ -60,7 +60,6 @@ jobs:
         id: createTag
         uses: anothrNick/github-tag-action@1.61.0
         env:
-
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: true
           DEFAULT_BUMP: ${{ inputs.bumpAmount }}
