@@ -48,7 +48,7 @@ jobs:
           DEFAULT_BUMP: ${{ inputs.bumpAmount }}
           RELEASE_BRANCHES: ${{ inputs.releaseBranch }}
       - name: updateRelease
-        uses: ncipollo/release-action@v1.11.0
+        uses: ncipollo/release-action@v1.12.0
         with:
           allowUpdates: true
           name: ${{ format(inputs.releaseTitle, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
