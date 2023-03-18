@@ -1,3 +1,4 @@
+# TODO Use this in the future, just find out how to do the ternary (most likely JavaScript)
 name: bump
 on:
   workflow_call:
@@ -78,8 +79,8 @@ jobs:
         uses: ncipollo/release-action@v1.12.0
         with:
           allowUpdates: true
-          name: ${{ format(inputs.releaseTitle, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
-          body: ${{ format(inputs.releaseBody, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
+          name: '${{ steps.createTag.outputs.old_tag ? format(inputs.releaseTitle, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) : format(inputs.initialReleaseTitle, github.repository_owner, github.repository, steps.createTag.outputs.new_tag) }}'
+          body: '${{ steps.createTag.outputs.old_tag ? format(inputs.releaseBody, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) : format(inputs.initialReleaseBody, github.repository_owner, github.repository, steps.createTag.outputs.new_tag) }}'
           tag: ${{ steps.createTag.outputs.new_tag }}
           makeLatest: ${{ inputs.makeLatest }}
     outputs:
@@ -87,5 +88,5 @@ jobs:
       newTag: ${{ steps.createTag.outputs.new_tag }}
       releaseId: ${{ steps.updateRelease.outputs.id }}
       releaseUrl: ${{ steps.updateRelease.outputs.html_url }}
-      releaseTitle: ${{ format(inputs.releaseTitle, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
-      releaseBody: ${{ format(inputs.releaseBody, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
+      releaseTitle: '${{ steps.createTag.outputs.old_tag ? format(inputs.releaseTitle, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) : format(inputs.initialReleaseTitle, github.repository_owner, github.repository, steps.createTag.outputs.new_tag) }}'
+      releaseBody: '${{ steps.createTag.outputs.old_tag ? format(inputs.releaseBody, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) : format(inputs.initialReleaseBody, github.repository_owner, github.repository, steps.createTag.outputs.new_tag) }}'
