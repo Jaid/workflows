@@ -35,7 +35,7 @@ on:
       makeLatest:
         type: string
         required: false
-        default: 'true'
+        default: true
         description: '{0} = repoOwner, {1} = repoName, {2} = oldTag, {3} = newTag'
     outputs:
       oldTag:
