@@ -12,11 +12,21 @@ on:
         required: false
         default: main
         description: The branch that will create release tags
+      initialReleaseTitle:
+        type: string
+        required: false
+        default: '[Initial release] {0}/{1} {2}'
+        description: 'Formats: {0} = repoOwner, {1} = repoName, {2} = newTag'
       releaseTitle:
         type: string
         required: false
         default: '{0}/{1} {3}'
         description: 'Formats: {0} = repoOwner, {1} = repoName, {2} = oldTag, {3} = newTag'
+      initialReleaseBody:
+        type: string
+        required: false
+        default: '[[{2}](https://github.com/{0}/{1}/tree/{2})'
+        description: '{0} = repoOwner, {1} = repoName, {2} = newTag'
       releaseBody:
         type: string
         required: false
@@ -68,8 +78,8 @@ jobs:
         uses: ncipollo/release-action@v1.12.0
         with:
           allowUpdates: true
-          name: ${{ format(inputs.releaseTitle, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
-          body: ${{ format(inputs.releaseBody, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
+          name: '${{ steps.createTag.outputs.old_tag ? format(inputs.releaseTitle, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) : format(inputs.initialReleaseTitle, github.repository_owner, github.repository, steps.createTag.outputs.new_tag) }}'
+          body: '${{ steps.createTag.outputs.old_tag ? format(inputs.releaseBody, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) : format(inputs.initialReleaseBody, github.repository_owner, github.repository, steps.createTag.outputs.new_tag) }}'
           tag: ${{ steps.createTag.outputs.new_tag }}
           makeLatest: ${{ inputs.makeLatest }}
     outputs:
@@ -77,5 +87,5 @@ jobs:
       newTag: ${{ steps.createTag.outputs.new_tag }}
       releaseId: ${{ steps.updateRelease.outputs.id }}
       releaseUrl: ${{ steps.updateRelease.outputs.html_url }}
-      releaseTitle: ${{ format(inputs.releaseTitle, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
-      releaseBody: ${{ format(inputs.releaseBody, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
+      releaseTitle: '${{ steps.createTag.outputs.old_tag ? format(inputs.releaseTitle, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) : format(inputs.initialReleaseTitle, github.repository_owner, github.repository, steps.createTag.outputs.new_tag) }}'
+      releaseBody: '${{ steps.createTag.outputs.old_tag ? format(inputs.releaseBody, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) : format(inputs.initialReleaseBody, github.repository_owner, github.repository, steps.createTag.outputs.new_tag) }}'
