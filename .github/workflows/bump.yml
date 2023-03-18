@@ -79,6 +79,7 @@ jobs:
         with:
           allowUpdates: true
           name: ${{ format(inputs.releaseTitle, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
+
           body: ${{ format(inputs.releaseBody, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
           tag: ${{ steps.createTag.outputs.new_tag }}
           makeLatest: ${{ inputs.makeLatest }}

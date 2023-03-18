@@ -7,11 +7,84 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v3
+      # Can’t remember why I wanted to have jq here :(
+      # - name: installPackages
+      #   uses: awalsh128/cache-apt-pkgs-action@v1.2.4
+      #   with:
+      #     packages: jq
+      - name: osRelease
+        shell: bash
+        run: |
+          styleBlue=$(TERM=xterm-256color tput setaf 6)
+          styleOrange=$(TERM=xterm-256color tput setaf 172)
+          styleReset=$(TERM=xterm-256color tput sgr0)
+          osRelease=$(cat /etc/os-release)
+          keys=($(printf %s "$osRelease" | cut --fields 1 --delimiter = | sort))
+          for key in "${keys[@]}"; do
+            # declare version=$(dpkg --status "$key" | grep --extended-regexp "^Version:" | cut --fields 2- --delimiter ' ')
+            declare value=$(printf %s "$osRelease" | grep --extended-regexp "^$key=" | cut --fields 2- --delimiter =)
+            if [[ ${value:0:1} == '"' ]]; then
+              value=${value:1:-1}
+            fi
+            printf "$styleOrange%s$styleReset: $styleBlue%s$styleReset\n" "$key" "$value"
+          done
       - name: env
         shell: bash
         run: |
-          keys=("${!env[@]}")
-          sortedKeys=($(printf '%s\n' "${keys[@]}" | sort -u))
+          styleBlue=$(TERM=xterm-256color tput setaf 6)
+          styleOrange=$(TERM=xterm-256color tput setaf 172)
+          styleReset=$(TERM=xterm-256color tput sgr0)
+          keys=($(printenv | cut -d'=' -f1))
+          sortedKeys=($(printf '%s\n' "${keys[@]}" | tr ' ' '\n' | sort -df))
           for key in "${sortedKeys[@]}"; do
-            printf '%s=%s\n' "$key" "${env[$key]}"
+            declare value=$(printenv "$key")
+            printf "$styleOrange%s$styleReset: $styleBlue%s$styleReset\n" "$key" "$value"
+          done
+      - name: ubuntuPackages
+        shell: bash
+        run: |
+          styleBlue=$(TERM=xterm-256color tput setaf 6)
+          styleOrange=$(TERM=xterm-256color tput setaf 172)
+          styleReset=$(TERM=xterm-256color tput sgr0)
+          keys=($(dpkg --get-selections | grep --invert-match deinstall | cut --fields 1))
+          for key in "${keys[@]}"; do
+            declare version=$(dpkg --status "$key" | grep --extended-regexp "^Version:" | cut --fields 2- --delimiter ' ')
+            printf "$styleOrange%s$styleReset: $styleBlue%s$styleReset\n" "$key" "$version"
+          done
+      - name: pythonPackages
+        shell: bash
+        run: |
+          styleBlue=$(TERM=xterm-256color tput setaf 6)
+          styleOrange=$(TERM=xterm-256color tput setaf 172)
+          styleReset=$(TERM=xterm-256color tput sgr0)
+          while read -r line; do
+            package=$(printf %s "$line" | cut --delimiter ' ' --fields 1)
+            version=$(printf %s "$line" | cut --delimiter ' ' --fields 2-)
+            printf "$styleOrange%s$styleReset: $styleBlue%s$styleReset\n" "$package" "$version"
+          done < <(pip list | sed '1,2d')
+      - name: commands
+        shell: bash
+        run: |
+          styleBlue=$(TERM=xterm-256color tput setaf 6)
+          styleOrange=$(TERM=xterm-256color tput setaf 172)
+          styleReset=$(TERM=xterm-256color tput sgr0)
+          IFS=: read -ra paths <<< "$PATH"
+          declare -a foundCommands
+          for folder in "${paths[@]}"; do
+            if [[ -d $folder ]]; then
+              files=()
+              while read -r -d $'\0' file; do
+                files+=("$file")
+              done < <(find "$folder" -maxdepth 1 -type f -executable -printf '%P\0')
+              sortedFiles=($(printf '%s\n' "${files[@]}" | sort -d))
+              if [[ ${#files[@]} -ge 1 ]]; then
+                printf "$styleOrange%s$styleReset (%s)\n" "$folder" "${#files[@]}"
+                for file in "${sortedFiles[@]}"; do
+                  if [[ ! " ${foundCommands[*]} " =~ " ${file} " ]]; then
+                    printf "$styleBlue%s$styleReset\n" "$file"
+                    foundCommands+=("$file")
+                  fi
+                done
+              fi
+            fi
           done
