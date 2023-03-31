@@ -106,7 +106,9 @@ jobs:
         shell: bash
         env:
           dockerHubToken: ${{ secrets.dockerHubToken }}
-        run: length=${#dockerHubToken}; printf 'length=%s' "$length" > $GITHUB_OUTPUT
+        run: |
+          length=${#dockerHubToken}
+          printf 'length=%s' "$length" > $GITHUB_OUTPUT
       - name: Login to ${{ inputs.dockerHubRegistry }}
         if: ${{ steps.getDockerHubTokenLength.outputs.length > 0 }}
         uses: docker/login-action@v2
