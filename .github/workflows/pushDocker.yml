@@ -81,6 +81,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       packages: write
+      contents: read
     outputs:
       meta: ${{ steps.buildAndPush.outputs.metadata }}
       digest: ${{ steps.buildAndPush.outputs.digest }}
