@@ -157,27 +157,24 @@ jobs:
           printf arch=%s "$arch" > $GITHUB_OUTPUT
       - name: getTags
         id: getTags
-        shell: node
+        shell: python
         env:
           baseTags: ${{ inputs.baseTags }}
           additionalTags: ${{ inputs.additionalTags }}
           shaTags: ${{ inputs.shaTags }}
         run: |
-          const tags = []
-          if (baseTags) {
-            tags.push(...baseTags.split('\n'))
-          }
-          if (additionalTags) {
-            tags.push(...additionalTags.split('\n'))
-          }
-          if (shaTags) {
-            tags.push('type=sha,format=long')
-          }
-          if (!tags.length) {
-            console.error('No tags given')
-            process.exit(1)
-          }
-          core.setOutput('tags', tags.join('\n'))
+          tags = []
+          if base_tags:
+            tags.extend(base_tags.split('\n'))
+          if additional_tags:
+            tags.extend(additional_tags.split('\n'))
+          if sha_tags:
+            tags.append('type=sha,format=long')
+          if not tags:
+            print('No tags given')
+            exit(1)
+          output_tags = '\n'.join(tags)
+          core.set_output('tags', output_tags)
       - name: Checkout
         uses: actions/checkout@v3.5.0
       - name: Set up qemu
