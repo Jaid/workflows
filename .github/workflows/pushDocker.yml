@@ -85,6 +85,7 @@ jobs:
     outputs:
       meta: ${{ steps.dockerBuild.outputs.metadata }}
       digest: ${{ steps.dockerBuild.outputs.digest }}
+      imageId: ${{ steps.dockerBuild.outputs.imageid }}
       imageSlug: ${{ steps.dockerHubRef.outputs.ref }}
       imageName: ${{ steps.dockerHubRef.outputs.shortName }}
     steps:
