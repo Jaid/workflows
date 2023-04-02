@@ -164,11 +164,11 @@ jobs:
           shaTags: ${{ inputs.shaTags }}
         run: |
           tags = []
-          if base_tags:
-            tags.extend(base_tags.split('\n'))
-          if additional_tags:
-            tags.extend(additional_tags.split('\n'))
-          if sha_tags:
+          if baseTags:
+            tags.extend(baseTags.split('\n'))
+          if additionalTags:
+            tags.extend(additionalTags.split('\n'))
+          if shaTags:
             tags.append('type=sha,format=long')
           if not tags:
             print('No tags given')
