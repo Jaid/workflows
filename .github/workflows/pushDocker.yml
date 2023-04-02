@@ -232,6 +232,7 @@ jobs:
           build-args: ${{ inputs.buildArgs }}
           cache-from: ${{ steps.getCacheInstruction.outputs.cache-from }}
           cache-to: ${{ steps.getCacheInstruction.outputs.cache-to }}
+          outputs: type=docker,dest=image.tar
       - name: dockerPush
         id: dockerPush
         uses: docker/build-push-action@v4.0.0
@@ -241,4 +242,5 @@ jobs:
           platforms: ${{ steps.getArch.outputs.arch }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=docker,dest=image.tar
           # build-args: ${{ inputs.buildArgs }}
