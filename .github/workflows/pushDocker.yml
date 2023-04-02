@@ -173,20 +173,8 @@ jobs:
            arch=linux/amd64,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/riscv64,linux/s390x
           fi
           printf arch=%s "$arch" > $GITHUB_OUTPUT
-      - name: dockerBuild
-        id: dockerBuild
-        uses: docker/build-push-action@v4.0.0
-        with:
-          load: true
-          context: ${{ inputs.buildContext }}
-          platforms: ${{ steps.getArch.outputs.arch }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: ${{ inputs.buildArgs }}
-      - name: dockerPush
-        id: dockerPush
+      - name: dockerBuildAndPush
+        id: dockerBuildAndPush
         uses: docker/build-push-action@v4.0.0
         with:
           push: true
@@ -194,3 +182,6 @@ jobs:
           platforms: ${{ steps.getArch.outputs.arch }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: ${{ inputs.buildArgs }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
