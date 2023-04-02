@@ -74,13 +74,30 @@ jobs:
           WITH_V: true
           DEFAULT_BUMP: ${{ inputs.bumpAmount }}
           RELEASE_BRANCHES: ${{ inputs.releaseBranch }}
+      - name: getReleaseTexts
+        id: getReleaseTexts
+        shell: bash
+        env:
+          oldTag: ${{ steps.createTag.outputs.old_tag }}
+          releaseTitle: ${{ format(inputs.releaseTitle, github.repository_owner, github.event.repository.name, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
+          releaseBody: ${{ format(inputs.releaseBody, github.repository_owner, github.event.repository.name, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
+          initialReleaseTitle: ${{ format(inputs.initialReleaseTitle, github.repository_owner, github.event.repository.name, steps.createTag.outputs.new_tag) }}
+          initialReleaseBody: ${{ format(inputs.initialReleaseBody, github.repository_owner, github.event.repository.name, steps.createTag.outputs.new_tag) }}
+        run: |
+          if [[ -n $oldTag ]]; then
+            printf title=%s "$releaseTitle" > $GITHUB_OUTPUT
+            printf '\nbody=%s' "$releaseBody" >> $GITHUB_OUTPUT
+          else
+            printf title=%s "$initialReleaseTitle" > $GITHUB_OUTPUT
+            printf '\nbody=%s' "$initialReleaseBody" >> $GITHUB_OUTPUT
+          fi
       - name: updateRelease
         id: updateRelease
         uses: ncipollo/release-action@v1.12.0
         with:
           allowUpdates: true
-          name: ${{ format(inputs.releaseTitle, github.repository_owner, github.event.repository.name, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
-          body: ${{ format(inputs.releaseBody, github.repository_owner, github.event.repository.name, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
+          name: ${{ steps.getReleaseTexts.outputs.title }}
+          body: ${{ steps.getReleaseTexts.outputs.body }}
           tag: ${{ steps.createTag.outputs.new_tag }}
           makeLatest: ${{ inputs.makeLatest }}
     outputs:
@@ -88,5 +105,5 @@ jobs:
       newTag: ${{ steps.createTag.outputs.new_tag }}
       releaseId: ${{ steps.updateRelease.outputs.id }}
       releaseUrl: ${{ steps.updateRelease.outputs.html_url }}
-      releaseTitle: ${{ format(inputs.releaseTitle, github.repository_owner, github.event.repository.name, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
-      releaseBody: ${{ format(inputs.releaseBody, github.repository_owner, github.event.repository.name, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
+      releaseTitle: ${{ steps.getReleaseTexts.outputs.title }}
+      releaseBody: ${{ steps.getReleaseTexts.outputs.body }}
