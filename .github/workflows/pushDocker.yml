@@ -163,18 +163,18 @@ jobs:
           additionalTags: ${{ inputs.additionalTags }}
           shaTags: ${{ inputs.shaTags }}
         run: |
+          import os
           tags = []
-          if baseTags:
-            tags.extend(baseTags.split('\n'))
-          if additionalTags:
-            tags.extend(additionalTags.split('\n'))
-          if shaTags:
+          if os.environ['baseTags']:
+            tags.extend(os.environ['baseTags'].split('\n'))
+          if os.environ['additionalTags']:
+            tags.extend(os.environ['additionalTags'].split('\n'))
+          if os.environ['shaTags']:
             tags.append('type=sha,format=long')
           if not tags:
             print('No tags given')
             exit(1)
-          output_tags = '\n'.join(tags)
-          core.set_output('tags', output_tags)
+          core.set_output('tags', '\n'.join(tags))
       - name: Checkout
         uses: actions/checkout@v3.5.0
       - name: Set up qemu
