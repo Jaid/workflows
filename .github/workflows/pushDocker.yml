@@ -121,13 +121,25 @@ jobs:
           registry: ${{ inputs.githubRegistry }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: getImageRefs
+        id: getImageRefs
+        shell: bash
+        env:
+          githubRegistry: ${{ inputs.githubRegistry }}
+          githubRepository: ${{ github.repository }}
+          dockerHubRef: ${{ steps.dockerHubRef.outputs.ref }}
+          dockerHubTokenGiven: ${{ steps.getDockerHubTokenLength.outputs.length > 0 && 1 }}
+        run: |
+          imageRefs="$githubRegistry/$githubRepository"
+          if [[ $dockerHubTokenGiven -ge 1 ]]; then
+            imageRefs+="\n$dockerHubRef"
+          fi
+          printf imageRefs=%s "$imageRefs" > $GITHUB_OUTPUT
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v4.3.0
         with:
-          images: |
-            ${{ inputs.githubRegistry }}/${{ github.repository }}
-            ${{ steps.dockerHubRef.outputs.ref }}
+          images: ${{ steps.getImageRefs.outputs.imageRefs }}
           labels: |
             maintainer=${{ github.actor }}
             org.opencontainers.image.vendor=${{ github.actor }}
@@ -146,6 +158,8 @@ jobs:
       - name: getArch
         id: getArch
         shell: bash
+        env:
+          givenArch: ${{ inputs.arch }}
         run: |
           if [[ -n $givenArch ]]; then
             arch=$givenArch
@@ -159,8 +173,6 @@ jobs:
            arch=linux/amd64,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/riscv64,linux/s390x
           fi
           printf arch=%s "$arch" > $GITHUB_OUTPUT
-        env:
-          givenArch: ${{ inputs.arch }}
       - name: dockerBuild
         id: dockerBuild
         uses: docker/build-push-action@v4.0.0
