@@ -230,8 +230,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: ${{ inputs.buildArgs }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: ${{ steps.getCacheInstruction.outputs.cache-from }}
+          cache-to: ${{ steps.getCacheInstruction.outputs.cache-to }}
       - name: dockerPush
         id: dockerPush
         uses: docker/build-push-action@v4.0.0
