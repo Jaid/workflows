@@ -79,8 +79,8 @@ jobs:
         uses: ncipollo/release-action@v1.12.0
         with:
           allowUpdates: true
-          name: ${{ format(inputs.releaseTitle, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
-          body: ${{ format(inputs.releaseBody, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
+          name: ${{ format(inputs.releaseTitle, github.repository_owner, github.event.repository.name, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
+          body: ${{ format(inputs.releaseBody, github.repository_owner, github.event.repository.name, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
           tag: ${{ steps.createTag.outputs.new_tag }}
           makeLatest: ${{ inputs.makeLatest }}
     outputs:
@@ -88,5 +88,5 @@ jobs:
       newTag: ${{ steps.createTag.outputs.new_tag }}
       releaseId: ${{ steps.updateRelease.outputs.id }}
       releaseUrl: ${{ steps.updateRelease.outputs.html_url }}
-      releaseTitle: ${{ format(inputs.releaseTitle, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
-      releaseBody: ${{ format(inputs.releaseBody, github.repository_owner, github.repository, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
+      releaseTitle: ${{ format(inputs.releaseTitle, github.repository_owner, github.event.repository.name, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
+      releaseBody: ${{ format(inputs.releaseBody, github.repository_owner, github.event.repository.name, steps.createTag.outputs.old_tag, steps.createTag.outputs.new_tag) }}
