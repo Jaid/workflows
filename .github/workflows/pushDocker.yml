@@ -171,7 +171,7 @@ jobs:
           additionalTags: ${{ inputs.additionalTags }}
           shaTags: ${{ inputs.shaTags }}
         run: |
-          import { core } from '@actions/core'
+          import core from '@actions/core'
           const tags = []
           if (baseTags) {
             tags.push(...baseTags.split('\n'))
@@ -183,7 +183,7 @@ jobs:
             tags.push('type=sha,format=long')
           }
           if (!tags.length) {
-            console.error('No tags given')
+            core.error('No tags given')
             process.exit(1)
           }
           core.setOutput('tags', tags.join('\n'))
