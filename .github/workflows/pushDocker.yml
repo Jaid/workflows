@@ -173,13 +173,13 @@ jobs:
         run: |
           import core from '@actions/core'
           const tags = []
-          if (baseTags) {
-            tags.push(...baseTags.split('\n'))
+          if (process.env.baseTags) {
+            tags.push(...process.env.baseTags.split('\n'))
           }
-          if (additionalTags) {
-            tags.push(...additionalTags.split('\n'))
+          if (process.env.additionalTags) {
+            tags.push(...process.env.additionalTags.split('\n'))
           }
-          if (shaTags) {
+          if (process.env.shaTags) {
             tags.push('type=sha,format=long')
           }
           if (!tags.length) {
