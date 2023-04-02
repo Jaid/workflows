@@ -7,11 +7,18 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v3.5.0
-      # Can’t remember why I wanted to have jq here :(
-      # - name: installPackages
-      #   uses: awalsh128/cache-apt-pkgs-action@v1.2.4
-      #   with:
-      #     packages: jq
+      - name: installPackages
+        uses: awalsh128/cache-apt-pkgs-action@v1.3.0
+        with:
+          packages: jq
+      - name: context
+        shell: bash
+        env:
+          githubContext: ${{ toJson(github) }}
+        run: |
+          set -o xtrace
+          jq . "$GITHUB_EVENT_PATH"
+          jq . < <($githubContext)
       - name: osRelease
         shell: bash
         run: |
