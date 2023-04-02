@@ -128,7 +128,7 @@ jobs:
           githubRegistry: ${{ inputs.githubRegistry }}
           githubRepository: ${{ github.repository }}
           dockerHubRef: ${{ steps.dockerHubRef.outputs.ref }}
-          dockerHubTokenGiven: ${{ steps.getDockerHubTokenLength.outputs.length > 0 && 1 }}
+          dockerHubTokenGiven: ${{ steps.getDockerHubTokenLength.outputs.length > 0 && 1 || 0 }}
         run: |
           imageRefs="$githubRegistry/$githubRepository"
           if [[ $dockerHubTokenGiven -ge 1 ]]; then
