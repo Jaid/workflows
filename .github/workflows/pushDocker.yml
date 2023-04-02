@@ -83,8 +83,8 @@ jobs:
       packages: write
       contents: read
     outputs:
-      meta: ${{ steps.buildAndPush.outputs.metadata }}
-      digest: ${{ steps.buildAndPush.outputs.digest }}
+      meta: ${{ steps.dockerBuild.outputs.metadata }}
+      digest: ${{ steps.dockerBuild.outputs.digest }}
       imageSlug: ${{ steps.dockerHubRef.outputs.ref }}
       imageName: ${{ steps.dockerHubRef.outputs.shortName }}
     steps:
@@ -161,15 +161,24 @@ jobs:
           printf 'arch=%s' "$arch" > $GITHUB_OUTPUT
         env:
           givenArch: ${{ inputs.arch }}
-      - name: buildAndPush
-        id: buildAndPush
-        uses: docker/build-push-action@v3
+      - name: dockerBuild
+        id: dockerBuild
+        uses: docker/build-push-action@v4.0.0
+        with:
+          load: true
+          context: ${{ inputs.buildContext }}
+          platforms: ${{ steps.getArch.outputs.arch }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: ${{ inputs.buildArgs }}
+      - name: dockerPush
+        id: dockerPush
+        uses: docker/build-push-action@v4.0.0
         with:
           push: true
           context: ${{ inputs.buildContext }}
           platforms: ${{ steps.getArch.outputs.arch }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ steps.dockerHubRef.outputs.ref }}:buildcache
-          cache-to: type=registry,ref=${{ steps.dockerHubRef.outputs.ref }}:buildcache,mode=max
-          build-args: ${{ inputs.buildArgs }}
