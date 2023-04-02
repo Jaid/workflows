@@ -88,6 +88,14 @@ jobs:
       imageSlug: ${{ steps.dockerHubRef.outputs.ref }}
       imageName: ${{ steps.dockerHubRef.outputs.shortName }}
     steps:
+      - name: setupNode
+        uses: actions/setup-node@v3.6.0
+        with:
+          node-version: current
+      - name: installActionsToolkitNode
+        shell: bash
+        run: |
+          npm install @actions/core
       - name: getDockerHubTokenLength
         id: getDockerHubTokenLength
         shell: bash
@@ -157,26 +165,28 @@ jobs:
           printf arch=%s "$arch" > $GITHUB_OUTPUT
       - name: getTags
         id: getTags
-        shell: python
+        shell: bash -c "node --input-type module < {0}"
         env:
           baseTags: ${{ inputs.baseTags }}
           additionalTags: ${{ inputs.additionalTags }}
           shaTags: ${{ inputs.shaTags }}
         run: |
-          import os
-          for dist in __import__('pkg_resources').working_set:
-            print dist.project_name.replace('Python', '')
-          tags = []
-          if os.environ['baseTags']:
-            tags.extend(os.environ['baseTags'].split('\n'))
-          if os.environ['additionalTags']:
-            tags.extend(os.environ['additionalTags'].split('\n'))
-          if os.environ['shaTags']:
-            tags.append('type=sha,format=long')
-          if not tags:
-            print('No tags given')
-            exit(1)
-          core.set_output('tags', '\n'.join(tags))
+          import { core } from '@actions/core'
+          const tags = []
+          if (baseTags) {
+            tags.push(...baseTags.split('\n'))
+          }
+          if (additionalTags) {
+            tags.push(...additionalTags.split('\n'))
+          }
+          if (shaTags) {
+            tags.push('type=sha,format=long')
+          }
+          if (!tags.length) {
+            console.error('No tags given')
+            process.exit(1)
+          }
+          core.setOutput('tags', tags.join('\n'))
       - name: Checkout
         uses: actions/checkout@v3.5.0
       - name: Set up qemu
