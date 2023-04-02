@@ -155,6 +155,29 @@ jobs:
             arch=linux/amd64,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/riscv64,linux/s390x
           fi
           printf arch=%s "$arch" > $GITHUB_OUTPUT
+      - name: getTags
+        id: getTags
+        shell: node
+        env:
+          baseTags: ${{ inputs.baseTags }}
+          additionalTags: ${{ inputs.additionalTags }}
+          shaTags: ${{ inputs.shaTags }}
+        run: |
+          const tags = []
+          if (baseTags) {
+            tags.push(...baseTags.split('\n'))
+          }
+          if (additionalTags) {
+            tags.push(...additionalTags.split('\n'))
+          }
+          if (shaTags) {
+            tags.push('type=sha,format=long')
+          }
+          if (!tags.length) {
+            console.error('No tags given')
+            process.exit(1)
+          }
+          core.setOutput('tags', tags.join('\n'))
       - name: Checkout
         uses: actions/checkout@v3.5.0
       - name: Set up qemu
@@ -182,11 +205,7 @@ jobs:
             maintainer=${{ github.actor }}
             org.opencontainers.image.vendor=${{ github.actor }}
             org.opencontainers.image.title=${{ steps.dockerHubRef.outputs.shortName }}
-          tags: |
-            ${{ inputs.baseTags }}
-            ${{ inputs.additionalTags }}
-            ${{ fromJSON('["type=sha,format=long", ""]')[inputs.shaTags == true] }}
-          # above hack from here: https://github.com/orgs/community/discussions/25725#discussioncomment-3248924
+          tags: ${{ steps.getTags.outputs.tags }}
           flavor: |
             latest=${{ inputs.flavorLatest }}
             prefix=${{ inputs.flavorPrefix }}
