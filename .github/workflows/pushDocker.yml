@@ -164,6 +164,8 @@ jobs:
           shaTags: ${{ inputs.shaTags }}
         run: |
           import os
+          for dist in __import__('pkg_resources').working_set:
+            print dist.project_name.replace('Python', '')
           tags = []
           if os.environ['baseTags']:
             tags.extend(os.environ['baseTags'].split('\n'))
