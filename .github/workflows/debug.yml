@@ -2,30 +2,7 @@ name: debug
 on:
   workflow_call: {}
 jobs:
-  dump:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        key:
-          - github
-          - job
-          - steps
-          - runner
-          - strategy
-          - matrix
-    steps:
-      - name: installPackages
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.0
-        with:
-          packages: jq
-      - name: context
-        shell: bash
-        env:
-          githubContext: ${{ toJson(matrix.key) }}
-        run: |
-          jq --indent 2 --color-output . <<< "$githubContext"
-  additionalDebug:
+  job:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -34,6 +11,30 @@ jobs:
         uses: awalsh128/cache-apt-pkgs-action@v1.3.0
         with:
           packages: jq
+      - name: dumpGithub
+        shell: bash
+        env:
+          object: ${{ toJson(github) }}
+        run: |
+          jq --indent 2 --color-output . <<< "$object"
+      - name: dumpJob
+        shell: bash
+        env:
+          object: ${{ toJson(job) }}
+        run: |
+          jq --indent 2 --color-output . <<< "$object"
+      - name: dumpSteps
+        shell: bash
+        env:
+          object: ${{ toJson(steps) }}
+        run: |
+          jq --indent 2 --color-output . <<< "$object"
+      - name: dumpRunner
+        shell: bash
+        env:
+          object: ${{ toJson(runner) }}
+        run: |
+          jq --indent 2 --color-output . <<< "$object"
       - name: osRelease
         shell: bash
         run: |
