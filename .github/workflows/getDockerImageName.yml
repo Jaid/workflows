@@ -1,0 +1,53 @@
+name: pushDocker
+on:
+  workflow_call:
+    inputs:
+      dockerHubUser:
+        type: string
+        required: false
+        default: ''
+        description: If unset, the Docker Hub user will be the same as the GitHub user
+    outputs:
+      imageUser:
+        description: The Docker Hub user
+        value: ${{ jobs.job.outputs.imageUser }}
+      imageName:
+        description: The Docker image name
+        value: ${{ jobs.job.outputs.imageName }}
+      imageSlug:
+        description: The Docker image slug
+        value: ${{ jobs.job.outputs.imageSlug }}
+jobs:
+  job:
+    runs-on: ubuntu-latest
+    outputs:
+      imageUser: ${{ steps.getDockerHubUser.outputs.output }}
+      imageName: ${{ steps.getDockerImageName.outputs.output }}
+      imageSlug: ${{ steps.getDockerHubUser.outputs.output }}/${{ steps.getDockerImageName.outputs.output }}
+    steps:
+      - name: setupNode
+        uses: actions/setup-node@v3.6.0
+        with:
+          node-version: current
+      - name: installActionsToolkitNode
+        shell: bash
+        run: |
+          npm install @actions/core @actions/github prevent-start
+      - name: getDockerHubUser
+        id: getDockerHubUser
+        shell: sh -c "node --input-type module < {0}"
+        run: |
+          import { context } from '@actions/github'
+          import core from '@actions/core'
+          console.dir(context)
+          const dockerHubUser = core.getInput('dockerHubUser') || context.payload.repository.owner.login
+          console.dir(dockerHubUser)
+          core.setOutput('user', dockerHubUser)
+      - name: getDockerImageName
+        id: getDockerImageName
+        shell: bash -c "node --input-type module < {0}"
+        run: |
+          import { context } from '@actions/github'
+          import core from '@actions/core'
+          import preventStart from 'prevent-start'
+          console.dir(preventStart.default(context.payload.repository.name.toLowerCase(), 'docker-'))

@@ -14,7 +14,8 @@ on:
       dockerHubUser:
         type: string
         required: false
-        default: jaidchen
+        default: ''
+        description: If unset, the Docker Hub user will be the same as the GitHub user
       dockerHubRegistry:
         type: string
         required: false
@@ -26,19 +27,35 @@ on:
       baseTags:
         type: string
         required: false
-        default: |
-          type=ref,event=branch
-          type=schedule,pattern=nightly
-          type=schedule,pattern={{date 'YYYYMMDD'}}
-      shaTags:
+        default: type=ref,event=branch
+      addShaTags:
         type: boolean
         required: false
         default: false
-        description: If true, create a docker image tag named after the commit’s SHA hash (good for persistence and debugging, but will produce a lot of clutter)
+        description: If true, create a Docker image tag named after the commit’s SHA hash (good for persistence and debugging, but might produce a lot of clutter)
+      addScheduleTags:
+        type: boolean
+        required: false
+        default: false
+        description: If true, create Docker image tags named after the current date (good for persistence and debugging, but might produce a lot of clutter) (only on schedule events)
+      addVersionTag:
+        type: boolean
+        required: false
+        default: false
+        description: If true, create a Docker image tag named after the new current version (only on push tag events)
+      versionTagPrefix:
+        type: string
+        required: false
+        default: v
+        description: Will be appended to the automatically generated version tag (only if addVersionTag is true and event is push tag)
       additionalTags:
         type: string
         required: false
-        default: ''
+        default: null
+      versionTag:
+        type: string
+        required: false
+        default: null
       flavorLatest:
         type: string
         required: false
@@ -51,6 +68,14 @@ on:
         type: string
         required: false
         default: ''
+      flavorConnectionString:
+        type: string
+        required: false
+        default: '-'
+      readmePath:
+        type: string
+        required: false
+        default: readme.md
       # flavorPrefixLatest:
       #   type: string
       #   required: false
@@ -72,20 +97,23 @@ on:
         value: ${{ jobs.job.outputs.meta }}
       digest:
         value: ${{ jobs.job.outputs.digest }}
+      imageId:
+        value: ${{ jobs.job.outputs.imageId }}
       imageName:
         value: ${{ jobs.job.outputs.imageName }}
       imageSlug:
         value: ${{ jobs.job.outputs.imageSlug }}
 jobs:
   job:
+    name: ${{ github.event_name }}${{ inputs.flavorSuffix && ' ' || '' }}${{ inputs.flavorSuffix }}
     runs-on: ubuntu-latest
     permissions:
       packages: write
       contents: read
     outputs:
-      meta: ${{ steps.dockerBuild.outputs.metadata }}
-      digest: ${{ steps.dockerBuild.outputs.digest }}
-      imageId: ${{ steps.dockerBuild.outputs.imageid }}
+      meta: ${{ steps.dockerPush.outputs.metadata }}
+      digest: ${{ steps.dockerPush.outputs.digest }}
+      imageId: ${{ steps.dockerPush.outputs.imageid }}
       imageSlug: ${{ steps.dockerHubRef.outputs.ref }}
       imageName: ${{ steps.dockerHubRef.outputs.shortName }}
     steps:
@@ -105,11 +133,20 @@ jobs:
         run: |
           length=${#dockerHubToken}
           printf 'length=%s' "$length" > $GITHUB_OUTPUT
+      - name: getDockerHubUser
+        id: getDockerHubUser
+        shell: sh -c "node --input-type module < {0}"
+        env:
+          fallback: ${{github.repository_owner }}
+        run: |
+          import core from '@actions/core'
+          const dockerHubUser = core.getInput('dockerHubUser') || process.env.fallback
+          core.setOutput('user', dockerHubUser)
       - name: dockerHubRef
         id: dockerHubRef
         shell: bash
         env:
-          dockerHubUser: ${{ inputs.dockerHubUser }}
+          dockerHubUser: ${{ steps.getDockerHubUser.outputs.user }}
           repoName: ${{ github.event.repository.name }}
         run: |
           shortName=${repoName##docker-}
@@ -166,28 +203,42 @@ jobs:
           printf arch=%s "$arch" > $GITHUB_OUTPUT
       - name: getTags
         id: getTags
-        shell: bash -c "node --input-type module < {0}"
-        env:
-          baseTags: ${{ inputs.baseTags }}
-          additionalTags: ${{ inputs.additionalTags }}
-          shaTags: ${{ inputs.shaTags }}
+        shell: sh -c "node --input-type module < {0}"
         run: |
           import core from '@actions/core'
           const tags = []
-          if (process.env.baseTags) {
-            tags.push(...process.env.baseTags.split('\n'))
+          // TODO I have no idea why this is necessary, but sometimes boolean inputs are not recognized as such and will be returned as empty strings
+          const getBooleanInput = key => {
+            const value = core.getInput(key)
+            if (!value.length) {
+              return false
+            }
+            return core.getBooleanInput(key)
           }
-          if (process.env.additionalTags) {
-            tags.push(...process.env.additionalTags.split('\n'))
+          if (core.getMultilineInput('baseTags')) {
+            tags.push(...core.getInput('baseTags').split('\n'))
           }
-          if (process.env.shaTags) {
+          if (core.getMultilineInput('additionalTags')) {
+            tags.push(...core.getInput('additionalTags').split('\n'))
+          }
+          if (core.getInput('versionTag')) {
+            tags.push(`type=raw,value=${core.getInput('versionTag')}}`)
+          }
+          if (getBooleanInput('addVersionTag')) {
+            tags.push(`type=pep440,pattern=${core.getInput('versionTagPrefix') ?? ''}{{version}}`)
+          }
+          if (getBooleanInput('addShaTags')) {
             tags.push('type=sha,format=long')
+          }
+          if (getBooleanInput('addScheduleTags')) {
+            tags.push('type=schedule,pattern=nightly')
+            tags.push('type=schedule,pattern={{date \'YYYYMMDD\'}}')
           }
           if (!tags.length) {
             core.error('No tags given')
             process.exit(1)
           }
-          core.setOutput('tags', tags.join('\n'))
+          core.setOutput('tags', tags.map(tag => tag.trim()).join('\n'))
       - name: Checkout
         uses: actions/checkout@v3.5.0
       - name: Set up qemu
@@ -198,7 +249,7 @@ jobs:
         if: ${{ steps.getDockerHubTokenLength.outputs.length > 0 }}
         uses: docker/login-action@v2.1.0
         with:
-          username: ${{ inputs.dockerHubUser }}
+          username: ${{ steps.getDockerHubUser.outputs.user }}
           password: ${{ secrets.dockerHubToken }}
       - name: Login to ${{ inputs.githubRegistry }}
         uses: docker/login-action@v2.1.0
@@ -218,12 +269,12 @@ jobs:
           tags: ${{ steps.getTags.outputs.tags }}
           flavor: |
             latest=${{ inputs.flavorLatest }}
-            prefix=${{ inputs.flavorPrefix }}
-            suffix=${{ inputs.flavorSuffix }}
+            prefix=${{ inputs.flavorPrefix && format('{0}{1}', inputs.flavorPrefix, inputs.flavorConnectionString) || '' }}
+            suffix=${{ inputs.flavorSuffix && format('{0}{1}', inputs.flavorConnectionString, inputs.flavorSuffix) || '' }}
           # prefixLatest=${{ inputs.flavorPrefixLatest }}
           # suffixLatest=${{ inputs.flavorSuffixLatest }}
-      - name: dockerBuild
-        id: dockerBuild
+      - name: dockerPush
+        id: dockerPush
         uses: docker/build-push-action@v4.0.0
         with:
           context: ${{ inputs.buildContext }}
@@ -233,15 +284,12 @@ jobs:
           build-args: ${{ inputs.buildArgs }}
           cache-from: ${{ steps.getCacheInstruction.outputs.cache-from }}
           cache-to: ${{ steps.getCacheInstruction.outputs.cache-to }}
-          outputs: type=docker,dest=image.tar
-      - name: dockerPush
-        id: dockerPush
-        uses: docker/build-push-action@v4.0.0
-        with:
           push: true
-          context: ${{ inputs.buildContext }}
-          platforms: ${{ steps.getArch.outputs.arch }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=docker,dest=image.tar
-          # build-args: ${{ inputs.buildArgs }}
+      - name: dockerPushReadme
+        if: ${{ steps.getDockerHubTokenLength.outputs.length > 0 && inputs.readmePath }}
+        uses: peter-evans/dockerhub-description@v3.3.0
+        with:
+          username: ${{ steps.getDockerHubUser.outputs.user }}
+          password: ${{ secrets.dockerHubToken }}
+          readme-filepath: ${{ inputs.readmePath }}
+          repository: ${{ steps.dockerHubRef.outputs.ref }}
