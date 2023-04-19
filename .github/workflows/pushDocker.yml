@@ -104,7 +104,10 @@ on:
       imageSlug:
         value: ${{ jobs.job.outputs.imageSlug }}
 jobs:
+  getDockerImageName:
+    uses: jaid/workflows/.github/workflows/getDockerImageName.yml@main
   job:
+    needs: getDockerImageName
     name: ${{ github.event_name }}${{ inputs.flavorSuffix && ' ' || '' }}${{ inputs.flavorSuffix }}
     runs-on: ubuntu-latest
     permissions:
@@ -114,8 +117,9 @@ jobs:
       meta: ${{ steps.dockerPush.outputs.metadata }}
       digest: ${{ steps.dockerPush.outputs.digest }}
       imageId: ${{ steps.dockerPush.outputs.imageid }}
-      imageSlug: ${{ steps.dockerHubRef.outputs.ref }}
-      imageName: ${{ steps.dockerHubRef.outputs.shortName }}
+      imageSlug: ${{ needs.getDockerImageName.outputs.imageSlug }}
+      imageUser: ${{ needs.getDockerImageName.outputs.imageUser }}
+      imageName: ${{ needs.getDockerImageName.outputs.imageName }}
     steps:
       - name: setupNode
         uses: actions/setup-node@v3.6.0
@@ -133,30 +137,11 @@ jobs:
         run: |
           length=${#dockerHubToken}
           printf 'length=%s' "$length" > $GITHUB_OUTPUT
-      - name: getDockerHubUser
-        id: getDockerHubUser
-        shell: sh -c "node --input-type module < {0}"
-        env:
-          fallback: ${{github.repository_owner }}
-        run: |
-          import core from '@actions/core'
-          const dockerHubUser = core.getInput('dockerHubUser') || process.env.fallback
-          core.setOutput('user', dockerHubUser)
-      - name: dockerHubRef
-        id: dockerHubRef
-        shell: bash
-        env:
-          dockerHubUser: ${{ steps.getDockerHubUser.outputs.user }}
-          repoName: ${{ github.event.repository.name }}
-        run: |
-          shortName=${repoName##docker-}
-          printf shortName=%s "$shortName" > $GITHUB_OUTPUT
-          printf '\nref=%s/%s' "$dockerHubUser" "$shortName" >> $GITHUB_OUTPUT
       - name: getCacheInstruction
         id: getCacheInstruction
         shell: bash
         env:
-          dockerHubRef: ${{ steps.dockerHubRef.outputs.ref }}
+          dockerHubRef: ${{ needs.getDockerImageName.outputs.imageSlug }}
           dockerHubTokenGiven: ${{ steps.getDockerHubTokenLength.outputs.length > 0 && 1 || 0 }}
         run: |
           cacheToSuffix=',mode=max'
@@ -175,7 +160,7 @@ jobs:
         env:
           githubRegistry: ${{ inputs.githubRegistry }}
           githubRepository: ${{ github.repository }}
-          dockerHubRef: ${{ steps.dockerHubRef.outputs.ref }}
+          dockerHubRef: ${{ needs.getDockerImageName.outputs.imageSlug }}
           dockerHubTokenGiven: ${{ steps.getDockerHubTokenLength.outputs.length > 0 && 1 || 0 }}
         run: |
           imageRefs="$githubRegistry/$githubRepository"
@@ -249,7 +234,7 @@ jobs:
         if: ${{ steps.getDockerHubTokenLength.outputs.length > 0 }}
         uses: docker/login-action@v2.1.0
         with:
-          username: ${{ steps.getDockerHubUser.outputs.user }}
+          username: ${{ needs.getDockerImageName.outputs.imageUser }}
           password: ${{ secrets.dockerHubToken }}
       - name: Login to ${{ inputs.githubRegistry }}
         uses: docker/login-action@v2.1.0
@@ -289,7 +274,7 @@ jobs:
         if: ${{ steps.getDockerHubTokenLength.outputs.length > 0 && inputs.readmePath }}
         uses: peter-evans/dockerhub-description@v3.3.0
         with:
-          username: ${{ steps.getDockerHubUser.outputs.user }}
+          username: ${{ needs.getDockerImageName.outputs.imageUser }}
           password: ${{ secrets.dockerHubToken }}
           readme-filepath: ${{ inputs.readmePath }}
-          repository: ${{ steps.dockerHubRef.outputs.ref }}
+          repository: ${{ needs.getDockerImageName.outputs.imageSlug }}
