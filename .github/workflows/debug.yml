@@ -14,7 +14,7 @@ jobs:
       - name: ls
         shell: bash
         run: |
-          ls --long --human-readable --all --color=always
+          ls -l --all --color --human-readable --literal
       - name: dumpGithub
         shell: bash
         env:
