@@ -250,7 +250,7 @@ jobs:
           labels: |
             maintainer=${{ github.actor }}
             org.opencontainers.image.vendor=${{ github.actor }}
-            org.opencontainers.image.title=${{ steps.dockerHubRef.outputs.shortName }}
+            org.opencontainers.image.title=${{ needs.getDockerImageName.outputs.imageName }}
           tags: ${{ steps.getTags.outputs.tags }}
           flavor: |
             latest=${{ inputs.flavorLatest }}
