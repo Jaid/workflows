@@ -223,6 +223,7 @@ jobs:
             core.error('No tags given')
             process.exit(1)
           }
+          console.dir(tags)
           core.setOutput('tags', tags.map(tag => tag.trim()).join('\n'))
       - name: Checkout
         uses: actions/checkout@v3.5.0
