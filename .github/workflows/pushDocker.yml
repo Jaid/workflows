@@ -189,42 +189,49 @@ jobs:
       - name: getTags
         id: getTags
         shell: sh -c "node --input-type module < {0}"
+        env:
+          inputs: ${{ toJSON(inputs) }}
         run: |
-          import core from '@actions/core'
+          import * as core from '@actions/core'
+          const inputs = JSON.parse(process.env.inputs)
           const tags = []
-          // TODO I have no idea why this is necessary, but sometimes boolean inputs are not recognized as such and will be returned as empty strings
-          const getBooleanInput = key => {
-            const value = core.getInput(key)
-            if (!value.length) {
-              return false
+          const add = input => {
+            if (!input) {
+              return
             }
-            return core.getBooleanInput(key)
+            let addition
+            if (typeof input === 'string') {
+              addition = input.split('\n')
+            } else {
+              addition = input
+            }
+            for (const tag of addition) {
+              if (tag) {
+                console.dir(tag)
+                tags.push(tag.trim())
+              }
+            }
           }
-          if (core.getMultilineInput('baseTags')) {
-            tags.push(...core.getInput('baseTags').split('\n'))
+          add(inputs.baseTags)
+          add(inputs.additionalTags)
+          if (inputs.versionTag) {
+            add(`type=raw,value=${inputs.versionTag}`)
           }
-          if (core.getMultilineInput('additionalTags')) {
-            tags.push(...core.getInput('additionalTags').split('\n'))
+          if (inputs.addVersionTag) {
+            add(`type=pep440,pattern=${inputs.versionTagPrefix ?? ''}{{version}}`)
           }
-          if (core.getInput('versionTag')) {
-            tags.push(`type=raw,value=${core.getInput('versionTag')}}`)
+          if (inputs.addShaTags) {
+            add('type=sha,format=long')
           }
-          if (getBooleanInput('addVersionTag')) {
-            tags.push(`type=pep440,pattern=${core.getInput('versionTagPrefix') ?? ''}{{version}}`)
-          }
-          if (getBooleanInput('addShaTags')) {
-            tags.push('type=sha,format=long')
-          }
-          if (getBooleanInput('addScheduleTags')) {
-            tags.push('type=schedule,pattern=nightly')
-            tags.push('type=schedule,pattern={{date \'YYYYMMDD\'}}')
+          if (inputs.addScheduleTags) {
+            add('type=schedule,pattern=nightly')
+            add('type=schedule,pattern={{date \'YYYYMMDD\'}}')
           }
           if (!tags.length) {
             core.error('No tags given')
             process.exit(1)
           }
-          console.dir(tags)
-          core.setOutput('tags', tags.map(tag => tag.trim()).join('\n'))
+          core.setOutput('tags', tags.join('\n'))
       - name: Checkout
         uses: actions/checkout@v3.5.0
       - name: Set up qemu
