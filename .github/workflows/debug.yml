@@ -11,6 +11,14 @@ jobs:
         uses: awalsh128/cache-apt-pkgs-action@v1.3.0
         with:
           packages: jq
+      - name: users
+        shell: bash
+        run: |
+          cat /etc/passwd
+      - name: groups
+        shell: bash
+        run: |
+          cat /etc/group
       - name: ls
         shell: bash
         run: |
