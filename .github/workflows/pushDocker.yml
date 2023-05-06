@@ -121,23 +121,32 @@ jobs:
       imageUser: ${{ needs.getDockerImageName.outputs.imageUser }}
       imageName: ${{ needs.getDockerImageName.outputs.imageName }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3.5.0
       - name: setupNode
         uses: actions/setup-node@v3.6.0
         with:
           node-version: current
-      - name: installActionsToolkitNode
+      - name: installNodePackages
         shell: bash
         run: |
-          npm install @actions/core read-file-string
+          cd ..
+          npm install --no-package-lock --no-save @actions/core read-file-string
+      - name: ls
+        shell: bash
+        run: |
+          ls -lah ..
+          ls -lah ../node_modules
+          ls -lah .
       - name: getDockerHubTokenLength
         id: getDockerHubTokenLength
         shell: sh -c "node --input-type module < {0}"
         env:
           secrets: ${{ toJSON(secrets) }}
         run: |
-          import { setOutput } from '@actions/core'
+          import * as core from '@actions/core'
           const secrets = JSON.parse(process.env.secrets)
-          setOutput('length', secrets.dockerHubToken?.length ?? 0)
+          core.setOutput('length', secrets.dockerHubToken?.length ?? 0)
       - name: getCacheInstruction
         id: getCacheInstruction
         shell: bash
@@ -175,7 +184,7 @@ jobs:
         env:
           inputs: ${{ toJSON(inputs) }}
         run: |
-          import { setOutput } from '@actions/core'
+          import * as core from '@actions/core'
           import readFileString from 'read-file-string'
           const inputs = JSON.parse(process.env.inputs)
           const getArch = async () => {
@@ -191,14 +200,14 @@ jobs:
             }
           }
           const arch = await getArch()
-          setOutput('arch', arch)
+          core.setOutput('arch', arch)
       - name: getTags
         id: getTags
         shell: sh -c "node --input-type module < {0}"
         env:
           inputs: ${{ toJSON(inputs) }}
         run: |
-          import * as core, { setOutput } from '@actions/core'
+          import * as core from '@actions/core'
           const inputs = JSON.parse(process.env.inputs)
           const tags = []
           const add = input => {
@@ -237,9 +246,7 @@ jobs:
             core.error('No tags given')
             process.exit(1)
           }
-          setOutput('tags', tags.join('\n'))
-      - name: Checkout
-        uses: actions/checkout@v3.5.0
+          core.setOutput('tags', tags.join('\n'))
       - name: Set up qemu
         if: ${{ steps.getArch.outputs.arch != 'linux/amd64' }}
         uses: docker/setup-qemu-action@v2.1.0
