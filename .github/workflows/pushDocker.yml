@@ -188,19 +188,19 @@ jobs:
           import readFileString from 'read-file-string'
           const inputs = JSON.parse(process.env.inputs)
           const getArch = async () => {
-            if (inputs.arch?.length) {
-              return inputs.arch
+            if (inputs.arch) {
+              return inputs.arch.split(',')
             } else {
-                archLines = await readFileString('arch.lines')
+              const archLines = await readFileString.default('arch.lines')
               if (archLines) {
-                return archLines.split('\n').map(line => line.trim()).filter(Boolean).join(',')
+                return archLines.split('\n').map(line => line.trim()).filter(Boolean)
               } else {
-                return 'linux/amd64,linux/arm/v7,linux/arm64/v8'
+                return ['linux/amd64']
               }
             }
           }
-          const arch = await getArch()
-          core.setOutput('arch', arch)
+          const archs = await getArch()
+          core.setOutput('arch', archs.join('\n'))
       - name: getTags
         id: getTags
         shell: sh -c "node --input-type module < {0}"

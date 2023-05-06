@@ -46,12 +46,6 @@ jobs:
         run: |
           cd ..
           npm install --no-package-lock --no-save @actions/core read-file-string execa
-      - name: ls
-        shell: bash
-        run: |
-          ls -lah ..
-          ls -lah ../node_modules
-          ls -lah .
       - name: getArch
         id: getArch
         shell: sh -c "node --input-type module < {0}"
@@ -91,7 +85,6 @@ jobs:
           build-args: ${{ inputs.buildArgs }}
           outputs: type=docker,dest=${{ runner.temp }}/testImage.tar
           tags: test
-          load: true
       - name: Run Docker image
         shell: sh -c "node --input-type module < {0}"
         env:
