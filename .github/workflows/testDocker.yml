@@ -6,7 +6,7 @@ on:
         type: string
         required: false
         default: ''
-        description: List of image archs to build, comma separated without spaces
+        description: Image arch to build and run
       buildContext:
         type: string
         required: false
@@ -46,34 +46,11 @@ jobs:
         run: |
           cd ..
           npm install --no-package-lock --no-save @actions/core read-file-string execa
-      - name: getArch
-        id: getArch
-        shell: sh -c "node --input-type module < {0}"
-        env:
-          inputs: ${{ toJSON(inputs) }}
-        run: |
-          import * as core from '@actions/core'
-          import readFileString from 'read-file-string'
-          const inputs = JSON.parse(process.env.inputs)
-          const getArch = async () => {
-            if (inputs.arch) {
-              return inputs.arch.split(',')
-            } else {
-              const archLines = await readFileString.default('arch.lines')
-              if (archLines) {
-                return archLines.split('\n').map(line => line.trim()).filter(Boolean)
-              } else {
-                return ['linux/amd64']
-              }
-            }
-          }
-          const archs = await getArch()
-          core.setOutput('arch', archs.join('\n'))
       - name: Set up qemu
-        if: ${{ steps.getArch.outputs.arch != 'linux/amd64' }}
+        if: ${{ inputs.arch != 'linux/amd64' }}
         uses: docker/setup-qemu-action@v2.1.0
         with:
-          platforms: ${{ steps.getArch.outputs.arch }}
+          platforms: ${{ inputs.arch }}
       - name: Set up buildx
         uses: docker/setup-buildx-action@v2.5.0
       - name: dockerPush
@@ -81,7 +58,7 @@ jobs:
         uses: docker/build-push-action@v4.0.0
         with:
           context: ${{ inputs.buildContext }}
-          platforms: ${{ steps.getArch.outputs.arch }}
+          platforms: ${{ inputs.arch }}
           build-args: ${{ inputs.buildArgs }}
           outputs: type=docker,dest=${{ runner.temp }}/testImage.tar
           tags: test
