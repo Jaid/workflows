@@ -15,7 +15,7 @@ on:
         type: string
         required: false
         default: ''
-      runArgs:
+      dockerRunArgs:
         type: string
         required: false
         default: --init
@@ -72,11 +72,12 @@ jobs:
           const inputs = JSON.parse(process.env.inputs)
           await execa('docker', ['load', '--input', `${process.env.RUNNER_TEMP}/testImage.tar`], {all: true, verbose: true, stdio: 'inherit'})
           const args = ['run', '--rm']
-          if (inputs.runArgs) {
-            args.push(...inputs.runArgs.split(' '))
+          if (inputs.dockerRunArgs) {
+            args.push(...inputs.dockerRunArgs.split(' '))
           }
           args.push('test')
           if (inputs.appArgs) {
             args.push(...inputs.appArgs.split(' '))
           }
-          await execa('docker', args, {all: true, verbose: true, stdio: 'inherit'})
+          const result = await execa('docker', args, {all: true, verbose: true, stdio: 'inherit'})
+          console.dir(result)
