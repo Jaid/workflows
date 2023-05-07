@@ -5,7 +5,7 @@ on:
       arch:
         type: string
         required: false
-        default: ''
+        default: linux/amd64
         description: Image arch to build and run
       buildContext:
         type: string
