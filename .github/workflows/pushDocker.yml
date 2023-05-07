@@ -76,14 +76,6 @@ on:
         type: string
         required: false
         default: readme.md
-      # flavorPrefixLatest:
-      #   type: string
-      #   required: false
-      #   default: auto
-      # flavorSuffixLatest:
-      #   type: string
-      #   required: false
-      #   default: auto
       buildArgs:
         type: string
         required: false
@@ -132,12 +124,6 @@ jobs:
         run: |
           cd ..
           npm install --no-package-lock --no-save @actions/core read-file-string
-      - name: ls
-        shell: bash
-        run: |
-          ls -lah ..
-          ls -lah ../node_modules
-          ls -lah .
       - name: getDockerHubTokenLength
         id: getDockerHubTokenLength
         shell: sh -c "node --input-type module < {0}"
@@ -280,8 +266,6 @@ jobs:
             latest=${{ inputs.flavorLatest }}
             prefix=${{ inputs.flavorPrefix && format('{0}{1}', inputs.flavorPrefix, inputs.flavorConnectionString) || '' }}
             suffix=${{ inputs.flavorSuffix && format('{0}{1}', inputs.flavorConnectionString, inputs.flavorSuffix) || '' }}
-          # prefixLatest=${{ inputs.flavorPrefixLatest }}
-          # suffixLatest=${{ inputs.flavorSuffixLatest }}
       - name: dockerPush
         id: dockerPush
         uses: docker/build-push-action@v4.0.0
