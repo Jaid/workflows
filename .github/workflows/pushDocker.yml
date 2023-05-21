@@ -98,6 +98,8 @@ on:
 jobs:
   getDockerImageName:
     uses: jaid/workflows/.github/workflows/getDockerImageName.yml@main
+    with:
+      dockerHubUser: ${{ inputs.dockerHubUser }}
   job:
     needs: getDockerImageName
     name: ${{ github.event_name }}${{ inputs.flavorSuffix && ' ' || '' }}${{ inputs.flavorSuffix }}
