@@ -92,6 +92,7 @@ jobs:
           }
           console.dir(sandboxGlobals)
           if (inputs.test) {
+            console.log(`Running validation expression: ${inputs.test}`)
             const vm = new VM({
               sandbox: sandboxGlobals
             })
