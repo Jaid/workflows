@@ -85,7 +85,7 @@ jobs:
           if (inputs.appArgs) {
             args.push(...inputs.appArgs.split(' '))
           }
-          const result = await execa('docker', args, {all: true, verbose: true, stdio: 'inherit'})
+          const result = await execa('docker', args, {all: true, verbose: true})
           const sandboxGlobals = {
             result,
             inputs
