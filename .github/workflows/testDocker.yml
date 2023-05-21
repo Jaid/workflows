@@ -96,6 +96,6 @@ jobs:
             })
             const validation = vm.run(inputs.test)
             if (!validation) {
-              throw new Error('Validation failed')
+              throw new Error('Validation expression returned ' + validation)
             }
           }
