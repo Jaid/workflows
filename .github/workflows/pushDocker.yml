@@ -117,7 +117,7 @@ jobs:
       imageName: ${{ needs.getDockerImageName.outputs.imageName }}
     steps:
       - name: checkout
-        uses: actions/checkout@v3.5.0
+        uses: actions/checkout@v3.5.2
       - name: setupNode
         uses: actions/setup-node@v3.6.0
         with:
@@ -261,7 +261,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: extractDockerMetadata
         id: meta
-        uses: docker/metadata-action@v4.3.0
+        uses: docker/metadata-action@v4.4.0
         with:
           images: ${{ steps.getImageRefs.outputs.imageRefs }}
           labels: |
@@ -287,7 +287,7 @@ jobs:
           push: true
       - name: dockerSyncReadme
         if: ${{ steps.getDockerHubTokenLength.outputs.length > 0 && inputs.readmePath }}
-        uses: peter-evans/dockerhub-description@v3.3.0
+        uses: peter-evans/dockerhub-description@v3.4.1
         with:
           username: ${{ needs.getDockerImageName.outputs.imageUser }}
           password: ${{ secrets.dockerHubToken }}
