@@ -44,7 +44,7 @@ jobs:
           const inputs = JSON.parse(process.env.inputs)
           const dockerHubUser = inputs.dockerHubUser || context.payload.repository.owner.login
           console.dir(dockerHubUser)
-          core.setOutput('user', dockerHubUser)
+          core.setOutput('output', dockerHubUser)
       - name: getDockerImageName
         id: getDockerImageName
         shell: bash -c "node --input-type module < {0}"
@@ -52,4 +52,5 @@ jobs:
           import { context } from '@actions/github'
           import core from '@actions/core'
           import preventStart from 'prevent-start'
-          console.dir(preventStart.default(context.payload.repository.name.toLowerCase(), 'docker-'))
+          const output = preventStart.default(context.payload.repository.name.toLowerCase(), 'docker-'))
+          core.setOutput('output', output)
