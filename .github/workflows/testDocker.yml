@@ -86,13 +86,14 @@ jobs:
             args.push(...inputs.appArgs.split(' '))
           }
           const result = await execa('docker', args, {all: true, verbose: true, stdio: 'inherit'})
+          const sandboxGlobals = {
+            result,
+            inputs
+          }
+          console.dir(sandboxGlobals)
           if (inputs.test) {
             const vm = new VM({
-              timeout: 60_000,
-              sandbox: {
-                result,
-                inputs
-              },
+              sandbox: sandboxGlobals
             })
             const validation = vm.run(inputs.test)
             if (!validation) {
