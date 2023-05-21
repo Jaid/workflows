@@ -36,11 +36,13 @@ jobs:
       - name: getDockerHubUser
         id: getDockerHubUser
         shell: sh -c "node --input-type module < {0}"
+        env:
+          inputs: ${{ toJSON(inputs) }}
         run: |
           import { context } from '@actions/github'
           import core from '@actions/core'
-          console.dir(context)
-          const dockerHubUser = core.getInput('dockerHubUser') || context.payload.repository.owner.login
+          const inputs = JSON.parse(process.env.inputs)
+          const dockerHubUser = inputs.dockerHubUser || context.payload.repository.owner.login
           console.dir(dockerHubUser)
           core.setOutput('user', dockerHubUser)
       - name: getDockerImageName
