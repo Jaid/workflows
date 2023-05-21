@@ -115,7 +115,7 @@ jobs:
       imageUser: ${{ needs.getDockerImageName.outputs.imageUser }}
       imageName: ${{ needs.getDockerImageName.outputs.imageName }}
     steps:
-      - name: Checkout
+      - name: checkout
         uses: actions/checkout@v3.5.0
       - name: setupNode
         uses: actions/setup-node@v3.6.0
@@ -235,26 +235,26 @@ jobs:
             process.exit(1)
           }
           core.setOutput('tags', tags.join('\n'))
-      - name: Set up qemu
+      - name: setupQemu
         if: ${{ steps.getArch.outputs.arch != 'linux/amd64' }}
         uses: docker/setup-qemu-action@v2.1.0
         with:
           platforms: ${{ steps.getArch.outputs.arch }}
-      - name: Set up buildx
+      - name: setupBuildx
         uses: docker/setup-buildx-action@v2.5.0
-      - name: Login to ${{ inputs.dockerHubRegistry }}
+      - name: login (${{ needs.getDockerImageName.outputs.imageUser }} @ ${{ inputs.dockerHubRegistry }})
         if: ${{ steps.getDockerHubTokenLength.outputs.length > 0 }}
         uses: docker/login-action@v2.1.0
         with:
           username: ${{ needs.getDockerImageName.outputs.imageUser }}
           password: ${{ secrets.dockerHubToken }}
-      - name: Login to ${{ inputs.githubRegistry }}
+      - name: login ((${{ github.actor }}) @ ${{ inputs.githubRegistry }})
         uses: docker/login-action@v2.1.0
         with:
           registry: ${{ inputs.githubRegistry }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Extract Docker metadata
+      - name: extractDockerMetadata
         id: meta
         uses: docker/metadata-action@v4.3.0
         with:
@@ -280,7 +280,7 @@ jobs:
           cache-from: ${{ steps.getCacheInstruction.outputs.cache-from }}
           cache-to: ${{ steps.getCacheInstruction.outputs.cache-to }}
           push: true
-      - name: dockerPushReadme
+      - name: dockerSyncReadme
         if: ${{ steps.getDockerHubTokenLength.outputs.length > 0 && inputs.readmePath }}
         uses: peter-evans/dockerhub-description@v3.3.0
         with:

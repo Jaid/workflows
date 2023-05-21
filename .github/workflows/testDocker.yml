@@ -40,7 +40,7 @@ jobs:
     outputs:
       meta: ${{ steps.dockerPush.outputs.metadata }}
     steps:
-      - name: Checkout
+      - name: checkout
         uses: actions/checkout@v3.5.0
       - name: setupNode
         uses: actions/setup-node@v3.6.0
@@ -51,15 +51,15 @@ jobs:
         run: |
           cd ..
           npm install --no-package-lock --no-save @actions/core read-file-string execa vm2
-      - name: Set up qemu
+      - name: setupQemu
         if: ${{ inputs.arch != 'linux/amd64' }}
         uses: docker/setup-qemu-action@v2.1.0
         with:
           platforms: ${{ inputs.arch }}
-      - name: Set up buildx
+      - name: setupBuildx
         uses: docker/setup-buildx-action@v2.5.0
       - name: dockerPush
-        id: dockerPush
+        id: buildImage
         uses: docker/build-push-action@v4.0.0
         with:
           context: ${{ inputs.buildContext }}
@@ -67,7 +67,7 @@ jobs:
           build-args: ${{ inputs.buildArgs }}
           outputs: type=docker,dest=${{ runner.temp }}/testImage.tar
           tags: test
-      - name: Run Docker image
+      - name: runImage
         shell: sh -c "node --input-type module < {0}"
         env:
           inputs: ${{ toJSON(inputs) }}
