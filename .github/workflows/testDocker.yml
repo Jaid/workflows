@@ -23,9 +23,10 @@ on:
         type: string
         required: false
         default: ''
-      validationExpression:
+      test:
         type: string
         required: false
+        description: 'JavaScript expression to validate the output (included globals: result, inputs)'
         default: ''
     outputs:
       meta:
@@ -85,7 +86,7 @@ jobs:
             args.push(...inputs.appArgs.split(' '))
           }
           const result = await execa('docker', args, {all: true, verbose: true, stdio: 'inherit'})
-          if (inputs.validationExpression) {
+          if (inputs.test) {
             const vm = new VM({
               timeout: 60_000,
               sandbox: {
@@ -93,7 +94,7 @@ jobs:
                 inputs
               },
             })
-            const validation = vm.run(inputs.validationExpression)
+            const validation = vm.run(inputs.test)
             if (!validation) {
               throw new Error('Validation failed')
             }
