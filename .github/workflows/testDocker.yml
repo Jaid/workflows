@@ -97,6 +97,7 @@ jobs:
               sandbox: sandboxGlobals
             })
             const validation = vm.run(inputs.test)
+            console.log(`Validation expression returned: ${validation}`)
             if (!validation) {
               throw new Error('Validation expression returned ' + validation)
             }
