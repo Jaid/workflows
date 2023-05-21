@@ -97,6 +97,7 @@ on:
         value: ${{ jobs.job.outputs.imageSlug }}
 jobs:
   getDockerImageName:
+    name: getDockerImageName
     uses: jaid/workflows/.github/workflows/getDockerImageName.yml@main
     with:
       dockerHubUser: ${{ inputs.dockerHubUser }}
@@ -154,18 +155,22 @@ jobs:
           fi
       - name: getImageRefs
         id: getImageRefs
-        shell: bash
+        shell: sh -c "node --input-type module < {0}"
         env:
-          githubRegistry: ${{ inputs.githubRegistry }}
-          githubRepository: ${{ github.repository }}
+          inputs: ${{ toJSON(inputs) }}
           dockerHubRef: ${{ needs.getDockerImageName.outputs.imageSlug }}
-          dockerHubTokenGiven: ${{ steps.getDockerHubTokenLength.outputs.length > 0 && 1 || 0 }}
+          getDockerHubTokenLength: ${{ steps.getDockerHubTokenLength.outputs.length }}
         run: |
-          imageRefs="$githubRegistry/$githubRepository"
-          if [[ $dockerHubTokenGiven -ge 1 ]]; then
-            imageRefs+="\n$dockerHubRef"
-          fi
-          printf imageRefs=%s "$imageRefs" > $GITHUB_OUTPUT
+          import * as core from '@actions/core'
+          const inputs = JSON.parse(process.env.inputs)
+          const refs = []
+          refs.push(`${inputs.githubRegistry}/${inputs.githubRepository}`)
+          if (process.env.getDockerHubTokenLength > 0) {
+            refs.push(process.env.dockerHubRef)
+          }
+          const output = refs.join('\n')
+          console.dir(output)
+          core.setOutput('imageRefs', output)
       - name: getArch
         id: getArch
         shell: sh -c "node --input-type module < {0}"
