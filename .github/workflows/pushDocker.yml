@@ -126,7 +126,7 @@ jobs:
         shell: bash
         run: |
           cd ..
-          npm install --no-package-lock --no-save @actions/core read-file-string
+          npm install --no-package-lock --no-save @actions/core @actions/github read-file-string
       - name: getDockerHubTokenLength
         id: getDockerHubTokenLength
         shell: sh -c "node --input-type module < {0}"
@@ -162,9 +162,10 @@ jobs:
           getDockerHubTokenLength: ${{ steps.getDockerHubTokenLength.outputs.length }}
         run: |
           import * as core from '@actions/core'
+          import { context } from '@actions/github'
           const inputs = JSON.parse(process.env.inputs)
           const refs = []
-          refs.push(`${inputs.githubRegistry}/${inputs.githubRepository}`)
+          refs.push(`${inputs.githubRegistry}/${context.payload.repository.full_name.toLowerCase()}`)
           if (process.env.getDockerHubTokenLength > 0) {
             refs.push(process.env.dockerHubRef)
           }
