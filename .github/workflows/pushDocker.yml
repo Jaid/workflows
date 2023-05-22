@@ -138,7 +138,7 @@ jobs:
           core.setOutput('length', secrets.dockerHubToken?.length ?? 0)
       - name: getCacheInstruction
         id: getCacheInstruction
-        shell: sh -c 'node --input-type module < {0}'
+        shell: sh -c "node --input-type module < {0}"
         env:
           needs: ${{ toJSON(needs) }}
           steps: ${{ toJSON(steps) }}
