@@ -138,21 +138,23 @@ jobs:
           core.setOutput('length', secrets.dockerHubToken?.length ?? 0)
       - name: getCacheInstruction
         id: getCacheInstruction
-        shell: bash
+        shell: sh -c 'node --input-type module < {0}'
         env:
-          dockerHubRef: ${{ needs.getDockerImageName.outputs.imageSlug }}
-          dockerHubTokenGiven: ${{ steps.getDockerHubTokenLength.outputs.length > 0 && 1 || 0 }}
+          needs: ${{ toJSON(needs) }}
+          steps: ${{ toJSON(steps) }}
         run: |
-          cacheToSuffix=',mode=max'
-          if [[ $dockerHubTokenGiven -ge 1 ]]; then
-            cacheInstruction="type=registry,ref=$dockerHubRef:buildcache"
-            printf cache-from=%s "$cacheInstruction" > $GITHUB_OUTPUT
-            printf '\ncache-to=%s%s' "$cacheInstruction" "$cacheToSuffix" >> $GITHUB_OUTPUT
-          else
-            cacheInstruction='type=gha'
-            printf cache-from=%s "$cacheInstruction" > $GITHUB_OUTPUT
-            printf '\ncache-to=%s%s' "$cacheInstruction" "$cacheToSuffix" >> $GITHUB_OUTPUT
-          fi
+          import core from '@actions/core'
+          const needs = JSON.parse(process.env.needs)
+          const steps = JSON.parse(process.env.steps)
+          const setOutput = cacheInstruction => {
+            core.setOutput('cache-from', cacheInstruction)
+            core.setOutput('cache-to', `${cacheInstruction},mode=max`)
+          }
+          if (steps.getDockerHubTokenLength.outputs.length > 0) {
+            setOutput(`type=registry,ref=${needs.getDockerImageName.outputs.imageSlug}:buildcache`)
+          } else {
+            setOutput('type=gha')
+          }
       - name: getImageRefs
         id: getImageRefs
         shell: sh -c "node --input-type module < {0}"
@@ -283,8 +285,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: ${{ inputs.buildArgs }}
-          cache-from: ${{ steps.getCacheInstruction.outputs.cache-from }}
-          cache-to: ${{ steps.getCacheInstruction.outputs.cache-to }}
+          cache-from: ${{ steps.getCacheInstruction.outputs.cacheFrom }}
+          cache-to: ${{ steps.getCacheInstruction.outputs.cacheTo }}
           push: true
       - name: dockerSyncReadme
         if: ${{ steps.getDockerHubTokenLength.outputs.length > 0 && inputs.readmePath }}
