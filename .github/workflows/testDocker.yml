@@ -50,7 +50,7 @@ jobs:
         shell: bash
         run: |
           cd ..
-          npm install --no-package-lock --no-save @actions/core read-file-string execa vm2
+          npm install --no-package-lock --no-save @actions/core read-file-string execa vm2 fs-extra
       - name: setupQemu
         if: ${{ inputs.arch != 'linux/amd64' }}
         uses: docker/setup-qemu-action@v2.1.0
@@ -75,6 +75,7 @@ jobs:
           import * as core from '@actions/core'
           import { execa } from 'execa'
           import { VM } from 'vm2'
+          import fs from 'fs-extra'
           const inputs = JSON.parse(process.env.inputs)
           await execa('docker', ['load', '--input', `${process.env.RUNNER_TEMP}/testImage.tar`], {all: true, verbose: true, stdio: 'inherit'})
           const args = ['run', '--rm']
@@ -85,9 +86,12 @@ jobs:
           if (inputs.appArgs) {
             args.push(...inputs.appArgs.split(' '))
           }
-          const result = await execa('docker', args, {all: true, verbose: true})
+          const executionResult = await execa('docker', args, {all: true, verbose: true})
           const sandboxGlobals = {
-            result,
+            stdout: executionResult.stdout,
+            stderr: executionResult.stderr,
+            fs,
+            executionResult,
             inputs
           }
           console.dir(sandboxGlobals)
