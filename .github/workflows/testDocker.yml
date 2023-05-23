@@ -72,7 +72,7 @@ jobs:
         env:
           inputs: ${{ toJSON(inputs) }}
         run: |
-          import * as core from '@actions/core'
+          import core from '@actions/core'
           import { execa } from 'execa'
           import { VM } from 'vm2'
           import fs from 'fs-extra'

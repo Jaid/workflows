@@ -133,7 +133,7 @@ jobs:
         env:
           secrets: ${{ toJSON(secrets) }}
         run: |
-          import * as core from '@actions/core'
+          import core from '@actions/core'
           const secrets = JSON.parse(process.env.secrets)
           core.setOutput('length', secrets.dockerHubToken?.length ?? 0)
       - name: getCacheInstruction
@@ -163,7 +163,7 @@ jobs:
           dockerHubRef: ${{ needs.getDockerImageName.outputs.imageSlug }}
           getDockerHubTokenLength: ${{ steps.getDockerHubTokenLength.outputs.length }}
         run: |
-          import * as core from '@actions/core'
+          import core from '@actions/core'
           import { context } from '@actions/github'
           const inputs = JSON.parse(process.env.inputs)
           const refs = []
@@ -180,7 +180,7 @@ jobs:
         env:
           inputs: ${{ toJSON(inputs) }}
         run: |
-          import * as core from '@actions/core'
+          import core from '@actions/core'
           import readFileString from 'read-file-string'
           const inputs = JSON.parse(process.env.inputs)
           const getArch = async () => {
@@ -203,7 +203,7 @@ jobs:
         env:
           inputs: ${{ toJSON(inputs) }}
         run: |
-          import * as core from '@actions/core'
+          import core from '@actions/core'
           const inputs = JSON.parse(process.env.inputs)
           const tags = []
           const add = input => {
