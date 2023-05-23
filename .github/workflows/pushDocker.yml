@@ -46,7 +46,7 @@ on:
       versionTagPrefix:
         type: string
         required: false
-        default: v
+        default: ''
         description: Will be appended to the automatically generated version tag (only if addVersionTag is true and event is push tag)
       additionalTags:
         type: string
