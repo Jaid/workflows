@@ -56,6 +56,11 @@ on:
         type: string
         required: false
         default: null
+      versionTagSemverPrefix:
+        type: string
+        required: false
+        default: null
+        description: If given, this will be the semver’s prefix
       flavorLatest:
         type: string
         required: false
@@ -197,14 +202,35 @@ jobs:
           }
           const archs = await getArch()
           core.setOutput('arch', archs.join('\n'))
+      - name: prepareVersionTag
+        id: prepareVersionTag
+        shell: sh -c "node --input-type module < {0}"
+        env:
+          inputs: ${{ toJson(inputs) }}
+        run: |
+          import core from '@actions/core'
+          const inputs = JSON.parse(process.env.inputs)
+          const getCleanedVersionTag = tag => {
+            if (!tag) {
+              return ''
+            }
+            const semver = /(?<versionPrefix>v?)(?<version>\d+\.\d+\.\d+)/.exec(tag)?.groups
+            if (semver) {
+              return `${inputs.versionTagSemverPrefix}${semver.version}`
+            }
+            return tag
+          }
+          core.setOutput('versionTag', getCleanedVersionTag(inputs.versionTag))
       - name: getTags
         id: getTags
         shell: sh -c "node --input-type module < {0}"
         env:
           inputs: ${{ toJSON(inputs) }}
+          steps: ${{ toJSON(steps) }}
         run: |
           import core from '@actions/core'
           const inputs = JSON.parse(process.env.inputs)
+          const steps = JSON.parse(process.env.steps)
           const tags = []
           const add = input => {
             if (!input) {
@@ -226,7 +252,7 @@ jobs:
           add(inputs.baseTags)
           add(inputs.additionalTags)
           if (inputs.versionTag) {
-            add(`type=raw,value=${inputs.versionTag}`)
+            add(`type=raw,value=${steps.prepareVersionTag.outputs.versionTag}`)
           }
           if (inputs.addVersionTag) {
             add(`type=pep440,pattern=${inputs.versionTagPrefix ?? ''}{{version}}`)
