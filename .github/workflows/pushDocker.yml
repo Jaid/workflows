@@ -146,14 +146,14 @@ jobs:
           import core from '@actions/core'
           const needs = JSON.parse(process.env.needs)
           const steps = JSON.parse(process.env.steps)
-          const setOutput = cacheInstruction => {
+          const setCacheInstruction = cacheInstruction => {
             core.setOutput('cache-from', cacheInstruction)
             core.setOutput('cache-to', `${cacheInstruction},mode=max`)
           }
           if (steps.getDockerHubTokenLength.outputs.length > 0) {
-            setOutput(`type=registry,ref=${needs.getDockerImageName.outputs.imageSlug}:buildcache`)
+            setCacheInstruction(`type=registry,ref=${needs.getDockerImageName.outputs.imageSlug}:buildcache`)
           } else {
-            setOutput('type=gha')
+            setCacheInstruction('type=gha')
           }
       - name: getImageRefs
         id: getImageRefs
