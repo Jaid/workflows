@@ -214,6 +214,9 @@ jobs:
             if (!tag) {
               return ''
             }
+            if (inputs.versionTagSemverPrefix == null) {
+              return tag
+            }
             const semver = /(?<versionPrefix>v?)(?<version>\d+\.\d+\.\d+)/.exec(tag)?.groups
             if (semver) {
               return `${inputs.versionTagSemverPrefix}${semver.version}`
@@ -251,7 +254,7 @@ jobs:
           }
           add(inputs.baseTags)
           add(inputs.additionalTags)
-          if (inputs.versionTag) {
+          if (steps.prepareVersionTag.outputs.versionTag) {
             add(`type=raw,value=${steps.prepareVersionTag.outputs.versionTag}`)
           }
           if (inputs.addVersionTag) {
