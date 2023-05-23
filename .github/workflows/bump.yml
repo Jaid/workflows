@@ -36,7 +36,6 @@ on:
         type: string
         required: false
         default: true
-        description: '{0} = repoOwner, {1} = repoName, {2} = oldTag, {3} = newTag)'
     outputs:
       oldTag:
         description: Name of the old tag used for relative bumping
@@ -66,6 +65,15 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
+      - name: setupNode
+        uses: actions/setup-node@v3.6.0
+        with:
+          node-version: current
+      - name: installNodePackages
+        shell: bash
+        run: |
+          cd ..
+          npm install --no-package-lock --no-save @actions/core
       - name: createTag
         id: createTag
         uses: anothrNick/github-tag-action@1.65.0
@@ -74,6 +82,23 @@ jobs:
           WITH_V: true
           DEFAULT_BUMP: ${{ inputs.bumpAmount }}
           RELEASE_BRANCHES: ${{ inputs.releaseBranch }}
+      - name: extractSemvers
+        id: extractSemvers
+        shell: sh -c "node --input-type module < {0}"
+        env:
+          steps: ${{ toJson(steps) }}
+        run: |
+          import core from '@actions/core'
+          const steps = JSON.parse(process.env.steps)
+          const extractSemver = tag => {
+            return /(?<versionPrefix>v?)(?<version>\d+\.\d+\.\d+)/.exec(tag)?.groups
+          }
+          const newSemver = extractSemver(steps.createTag.outputs.new_tag)
+          console.dir({
+            newTag: steps.createTag.outputs.new_tag,
+            newSemver
+          })
+          core.setOutput('newTag', newSemver?.version)
       - name: getReleaseTexts
         id: getReleaseTexts
         shell: bash
@@ -103,6 +128,7 @@ jobs:
     outputs:
       oldTag: ${{ steps.createTag.outputs.old_tag }}
       newTag: ${{ steps.createTag.outputs.new_tag }}
+      newSemver: ${{ steps.extractSemvers.outputs.newSemver }}
       releaseId: ${{ steps.updateRelease.outputs.id }}
       releaseUrl: ${{ steps.updateRelease.outputs.html_url }}
       releaseTitle: ${{ steps.getReleaseTexts.outputs.title }}
