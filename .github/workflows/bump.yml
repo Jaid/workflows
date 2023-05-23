@@ -43,6 +43,9 @@ on:
       newTag:
         description: Name of the newly created git tag
         value: ${{ jobs.job.outputs.newTag }}
+      newSemver:
+        description: Semver notation of the newly created git tag
+        value: ${{ jobs.job.outputs.newSemver }}
       releaseId:
         description: GitHub API ID of newly created release
         value: ${{ jobs.job.outputs.releaseId }}
