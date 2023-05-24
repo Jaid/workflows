@@ -101,7 +101,7 @@ jobs:
             newTag: steps.createTag.outputs.new_tag,
             newSemver
           })
-          core.setOutput('newTag', newSemver?.version)
+          core.setOutput('newSemver', newSemver?.version)
       - name: getReleaseTexts
         id: getReleaseTexts
         shell: bash
