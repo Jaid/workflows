@@ -18,7 +18,7 @@ on:
       dockerRunArgs:
         type: string
         required: false
-        default: --init
+        default: ''
       appArgs:
         type: string
         required: false
