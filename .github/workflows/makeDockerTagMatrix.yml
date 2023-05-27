@@ -1,0 +1,139 @@
+on:
+  workflow_call:
+    inputs:
+      bases:
+        description: List of base images, split by anything
+        required: false
+        type: string
+      platform:
+        description: List of platforms, split by anything
+        required: false
+        type: string
+        default: linux/amd64 linux/arm64/v8
+      additionEvals:
+        description: List of additional values, javascript object code without outer braces
+        required: false
+        type: string
+      idEval:
+        description: Javascript code to generate the id
+        required: false
+        type: string
+        default: |
+          [
+            baseShortcuts[base],
+            platformShortcuts[platform] ?? platform.replaceAll('/', '_')
+          ].filter(Boolean).join('-')
+    outputs:
+      output:
+        description: The dynamically generated matrix in JSON
+        value: ${{ jobs.job.outputs.output }}
+jobs:
+  job:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      output: ${{ steps.makeMatrix.outputs.output }}
+    steps:
+      - name: setupNode
+        uses: actions/setup-node@v3.6.0
+        with:
+          node-version: current
+      - name: installNodePackages
+        shell: bash
+        run: |
+          cd ..
+          npm install --no-package-lock --no-save @actions/core vm2 super-regex
+      - id: makeMatrix
+        shell: sh -c "node --input-type module < {0}"
+        env:
+          inputs: ${{ toJSON(inputs) }}
+        run: |
+          import core from "@actions/core";
+          import { matches, firstMatch } from "super-regex";
+          import { VM } from "vm2";
+          const inputs = JSON.parse(process.env.inputs);
+
+          console.dir(inputs)
+          console.dir(process)
+
+          const matchAll = (regex, string) => {
+            return Array.from(
+              matches(regex, string, {
+                matchTimeout: 60_000,
+              })
+            ).map((match) => match.namedGroups);
+          };
+
+          const runVm = (code, globals) => {
+            const vm = new VM({
+              sandbox: globals,
+              allowAsync: false,
+              timeout: 60_000,
+            });
+            return vm.run(code);
+          };
+
+          const bases = inputs.bases
+            ? matchAll(/(?<match>[\w-_:]+)/g, inputs.bases).map((match) => match.match)
+            : [""];
+          const platforms = matchAll(/(?<match>[a-z0-9/]+)/g, inputs.platform).map(
+            (match) => match.match
+          );
+          const additions = inputs.additionEvals
+            ? inputs.additionEvals
+                .split("\n")
+                .map((line) => line.trim())
+                .filter((line) => line.length > 0)
+            : [];
+          const matrix = [];
+          for (const base of bases) {
+            for (const platform of platforms) {
+              const entry = {
+                platform,
+                base,
+              };
+              if (additions) {
+                for (const addition of additions) {
+                  const { key, code } = firstMatch(
+                    /^(?<key>\w+)\s*:\s*(?<code>.+)$/,
+                    addition
+                  ).namedGroups;
+                  entry[key] = runVm(code, {
+                    ...entry,
+                  });
+                }
+              }
+              const platformShortcuts = {
+                "linux/amd64": null,
+                "linux/arm/v7": "arm7",
+                "linux/arm64/v8": "arm8",
+                "linux/ppc64le": "ppc",
+                "linux/s390x": "s390x",
+                "linux/386": "386",
+              };
+              const baseShortcuts = {
+                "ubuntu:rolling": null,
+                "debian:stable-slim": "debian",
+                "ubuntu:latest": "lts",
+              };
+              entry.id = runVm(inputs.idEval, {
+                ...entry,
+                platformShortcuts,
+                baseShortcuts,
+              });
+              matrix.push(entry);
+            }
+          }
+
+          const output = JSON.stringify(matrix);
+
+          console.dir({
+            platforms,
+            bases,
+            additions,
+            output,
+            matrix,
+          });
+
+          core.setOutput("output", output);
