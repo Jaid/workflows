@@ -22,7 +22,7 @@ on:
           [
             baseShortcuts[base],
             platformShortcuts[platform] ?? platform.replaceAll('/', '_')
-          ].filter(Boolean).join('-')
+          ].filter(entry => entry?.length).join('-')
     outputs:
       output:
         description: The dynamically generated matrix in JSON
