@@ -105,7 +105,7 @@ jobs:
                 }
               }
               const platformShortcuts = {
-                "linux/amd64": null,
+                "linux/amd64": false,
                 "linux/arm/v7": "arm7",
                 "linux/arm64/v8": "arm8",
                 "linux/ppc64le": "ppc",
@@ -113,7 +113,7 @@ jobs:
                 "linux/386": "386",
               };
               const baseShortcuts = {
-                "ubuntu:rolling": null,
+                "ubuntu:rolling": false,
                 "debian:stable-slim": "debian",
                 "ubuntu:latest": "lts",
               };
