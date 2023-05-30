@@ -122,6 +122,7 @@ jobs:
                 platformShortcuts,
                 baseShortcuts,
               });
+              entry.buildArgs = Object.entries(entry).map(([key, value]) => `${key}=${value}`).join('\n')
               matrix.push(entry);
             }
           }
