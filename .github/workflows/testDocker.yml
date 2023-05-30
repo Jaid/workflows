@@ -33,6 +33,10 @@ on:
         required: false
         description: Path to image file to save the build to
         default: /home/runner/work/_temp/testImage.tar
+      imageArtifact:
+        type: string
+        required: false
+        description: Name of the image artifact to save the build to
     outputs:
       meta:
         value: ${{ jobs.job.outputs.meta }}
@@ -111,3 +115,9 @@ jobs:
               throw new Error('Validation expression returned ' + validation)
             }
           }
+      - name: saveArtifact
+        if: ${{ inputs.imageArtifact }}
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          name: ${{ inputs.imageArtifact }}
+          path: ${{ inputs.imageFile }}
