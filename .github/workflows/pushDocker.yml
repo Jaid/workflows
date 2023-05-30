@@ -85,10 +85,14 @@ on:
         type: string
         required: false
         default: ''
+      test:
+        type: string
+        required: false
+        default: ''
     secrets:
       dockerHubToken:
         required: false
-        description: 'Create here with “Read, Write”: https://hub.docker.com/settings/security?generateToken=true'
+        description: 'Create here with “Read, Write”: https://hub.docker.com/settings/security?generateToken=true'^
     outputs:
       meta:
         value: ${{ jobs.job.outputs.meta }}

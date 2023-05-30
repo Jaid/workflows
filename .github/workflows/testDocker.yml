@@ -23,7 +23,7 @@ on:
         type: string
         required: false
         default: ''
-      test:
+      testEval:
         type: string
         required: false
         description: 'JavaScript expression to validate the output (included globals: result, inputs)'
@@ -95,12 +95,12 @@ jobs:
             inputs
           }
           console.dir(sandboxGlobals)
-          if (inputs.test) {
-            console.log(`Running validation expression: ${inputs.test}`)
+          if (inputs.testEval) {
+            console.log(`Running validation expression: ${inputs.testEval}`)
             const vm = new VM({
               sandbox: sandboxGlobals
             })
-            const validation = vm.run(inputs.test)
+            const validation = vm.run(inputs.testEval)
             console.log(`Validation expression returned: ${validation}`)
             if (!validation) {
               throw new Error('Validation expression returned ' + validation)
