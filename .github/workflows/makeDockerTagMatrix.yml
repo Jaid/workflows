@@ -55,8 +55,7 @@ jobs:
           import { VM } from "vm2";
           const inputs = JSON.parse(process.env.inputs);
 
-          console.dir(inputs)
-          console.dir(process)
+          console.dir('Inputs: ', inputs)
 
           const matchAll = (regex, string) => {
             return Array.from(
@@ -134,7 +133,6 @@ jobs:
             platforms,
             bases,
             additions,
-            output,
             matrix,
           });
 
