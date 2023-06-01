@@ -15,7 +15,7 @@ on:
         required: false
         type: string
       idEval:
-        description: Javascript code to generate the id
+        description: JavaScript code to generate the id
         required: false
         type: string
         default: |
@@ -29,6 +29,7 @@ on:
         value: ${{ jobs.job.outputs.output }}
 jobs:
   job:
+    name: makeMatrix
     runs-on: ubuntu-latest
     permissions:
       contents: read
