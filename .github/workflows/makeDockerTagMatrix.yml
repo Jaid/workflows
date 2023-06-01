@@ -117,7 +117,7 @@ jobs:
                 "debian:stable-slim": "debian",
                 "ubuntu:latest": "lts",
               };
-              entry.id = runVm(inputs.idEval, {
+              entry.id = runVm(idEval, {
                 ...entry,
                 platformShortcuts,
                 baseShortcuts,
@@ -130,6 +130,7 @@ jobs:
           const output = JSON.stringify(matrix);
 
           console.dir({
+            idEval,
             platforms,
             bases,
             additions,
