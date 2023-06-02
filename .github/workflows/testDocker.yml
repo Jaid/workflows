@@ -1,4 +1,3 @@
-name: testDocker
 on:
   workflow_call:
     inputs:
@@ -37,12 +36,17 @@ on:
         type: string
         required: false
         description: Name of the image artifact to save the build to
+      jobName:
+        type: string
+        required: false
+        description: Name of the job to run
+        default: ${{ format('{0} → {1}', github.event_name, 'test') }}
     outputs:
       meta:
-        value: ${{ jobs.job.outputs.meta }}
+        value: ${{ jobs.test.outputs.meta }}
 jobs:
-  job:
-    name: ${{ github.event_name }}
+  test:
+    name: ${{ inputs.jobName }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
