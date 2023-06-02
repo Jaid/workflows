@@ -117,12 +117,13 @@ jobs:
                 "debian:stable-slim": "debian",
                 "ubuntu:latest": "lts",
               };
-              entry.id = runVm(idEval, {
+              entry.flavor = runVm(idEval, {
                 ...entry,
                 platformShortcuts,
                 baseShortcuts,
               });
               entry.buildArgs = Object.entries(entry).map(([key, value]) => `${key}=${value}`).join('\n')
+              entry.id = entry.flavor || 'default'
               matrix.push(entry);
             }
           }
@@ -137,4 +138,4 @@ jobs:
             matrix,
           });
 
-          core.setOutput("output", output);
+          core.setOutput('output', output);
