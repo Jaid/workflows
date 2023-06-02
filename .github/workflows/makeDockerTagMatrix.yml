@@ -9,6 +9,7 @@ on:
         description: List of platforms, split by anything
         required: false
         type: string
+        default: linux/amd64 linux/arm64/v8
       additionEvals:
         description: List of additional values, javascript object code without outer braces
         required: false
@@ -17,6 +18,11 @@ on:
         description: JavaScript code to generate the id
         required: false
         type: string
+        default: |
+          [
+            baseShortcuts[base],
+            platformShortcuts[platform] ?? platform.replaceAll('/', '_')
+          ].filter(Boolean).join('-')
     outputs:
       output:
         description: The dynamically generated matrix in JSON
@@ -48,14 +54,11 @@ jobs:
           import { matches, firstMatch } from "super-regex";
           import { VM } from "vm2";
           const inputs = JSON.parse(process.env.inputs);
-          const idEval = inputs.idEval || `
-          [
-            baseShortcuts[base],
-            platformShortcuts[platform] ?? platform.replaceAll('/', '_')
-          ].filter(entry => entry?.length).join('-')
-          `
+          const idEval = inputs.idEval
 
-          console.dir('Inputs: ', inputs)
+          console.dir({
+            inputs,
+          })
 
           const matchAll = (regex, string) => {
             return Array.from(
@@ -77,9 +80,7 @@ jobs:
           const bases = inputs.bases
             ? matchAll(/(?<match>[\w-_:]+)/g, inputs.bases).map((match) => match.match)
             : [''];
-          const platforms = inputs.platforms
-            ? matchAll(/(?<match>[a-z0-9/]+)/g, inputs.platform).map((match) => match.match)
-            : ['linux/amd64']
+          const platforms = matchAll(/(?<match>[a-z0-9/]+)/g, inputs.platform).map((match) => match.match)
           const additions = inputs.additionEvals
             ? inputs.additionEvals
                 .split("\n")
