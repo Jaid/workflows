@@ -104,6 +104,7 @@ jobs:
           const sandboxGlobals = {
             stdout: executionResult.stdout,
             stderr: executionResult.stderr,
+            status: executionResult.exitCode,
             fs,
             executionResult,
             inputs
