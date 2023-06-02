@@ -26,7 +26,7 @@ on:
         type: string
         required: false
         description: 'JavaScript expression to validate the output (included globals: result, inputs)'
-        default: ''
+        default: status === 0
       imageFile:
         type: string
         required: false
