@@ -81,6 +81,7 @@ jobs:
           outputs: type=docker,dest=${{ inputs.imageFile }}
           tags: test
       - name: runImage
+        if: ${{ inputs.arch == 'linux/amd64' }}
         shell: sh -c "node --input-type module < {0}"
         env:
           inputs: ${{ toJSON(inputs) }}
