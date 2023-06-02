@@ -13,8 +13,8 @@ on:
         description: List of additional values, javascript object code without outer braces
         required: false
         type: string
-      idEval:
-        description: JavaScript code to generate the id
+      flavorEval:
+        description: JavaScript code to generate the flavor and id values
         required: false
         type: string
     outputs:
@@ -48,7 +48,7 @@ jobs:
           import { matches, firstMatch } from 'super-regex'
           import { VM } from "vm2";
           const inputs = JSON.parse(process.env.inputs)
-          const idEval = inputs.idEval || `[
+          const flavorEval = inputs.flavorEval || `[
             baseShortcuts[base],
             platformShortcuts[platform] ?? platform.replaceAll('/', '_')
           ].filter(part => part?.length).join('-')`
@@ -117,7 +117,7 @@ jobs:
                 "debian:stable-slim": "debian",
                 "ubuntu:latest": "lts",
               };
-              entry.flavor = runVm(idEval, {
+              entry.flavor = runVm(flavorEval, {
                 ...entry,
                 platformShortcuts,
                 baseShortcuts,
@@ -131,7 +131,7 @@ jobs:
           const output = JSON.stringify(matrix);
 
           console.dir({
-            idEval,
+            flavorEval,
             platforms,
             bases,
             additions,
