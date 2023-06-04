@@ -67,6 +67,10 @@ on:
         value: ${{ jobs.test.outputs.imagePath }}
       imageArtifact:
         value: ${{ jobs.test.outputs.imageArtifact }}
+      cacheTo:
+        value: ${{ inputs.cacheTo }}
+      cacheFrom:
+        value: ${{ inputs.cacheFrom }}
 jobs:
   test:
     name: ${{ inputs.jobName }}
