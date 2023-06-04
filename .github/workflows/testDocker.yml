@@ -51,7 +51,7 @@ on:
         value: ${{ jobs.test.outputs.meta }}
       imageFolder:
         value: ${{ inputs.imageFolder }}
-      imageFileName:
+      imageFile:
         value: ${{ inputs.imageFile }}
       imagePath:
         value: ${{ jobs.test.outputs.imagePath }}
