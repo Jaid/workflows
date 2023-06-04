@@ -41,6 +41,16 @@ on:
         type: string
         required: false
         description: Name of the image artifact to save the build to
+      cacheTo:
+        type: string
+        required: false
+        description: Cache key to save the build to
+        default: type=gha,mode=max
+      cacheFrom:
+        type: string
+        required: false
+        description: Cache key to load the build from
+        default: type=gha
       jobName:
         type: string
         required: false
@@ -106,6 +116,8 @@ jobs:
           platforms: ${{ inputs.arch }}
           build-args: ${{ inputs.buildArgs }}
           outputs: type=docker,dest=${{ steps.getImagePath.outputs.imagePath }}
+          cache-to: ${{ inputs.cacheTo }}
+          cache-from: ${{ inputs.cacheFrom }}
           tags: test
       - id: runImage
         if: ${{ inputs.arch == 'linux/amd64' }}
