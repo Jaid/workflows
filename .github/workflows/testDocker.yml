@@ -31,7 +31,7 @@ on:
         type: string
         required: false
         description: Folder to save the build to
-        default: /home/runner/work/_temp/${{ github.run_id }}
+        default: /tmp/dockerTest/${{ github.run_id }}
       imageFile:
         type: string
         required: false
