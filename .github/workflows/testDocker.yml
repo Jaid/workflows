@@ -45,7 +45,7 @@ on:
         type: string
         required: false
         description: Cache key to save the build to
-        default: type=gha,mode=max
+        default: type=inline,mode=max,compression=zstd,compression-level=19
       cacheFrom:
         type: string
         required: false
@@ -185,3 +185,9 @@ jobs:
         with:
           name: ${{ steps.getArtifactName.outputs.value }}
           path: ${{ inputs.imageFolder }}
+      - id: checkArtifact
+        shell: bash
+        env:
+          imageFolder: ${{ inputs.imageFolder }}
+        run: |
+          ls -l --almost-all --human-readable "$imageFolder"
