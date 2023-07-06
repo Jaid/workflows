@@ -4,6 +4,7 @@ on:
 jobs:
   job:
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: checkout
         uses: actions/checkout@v3.5.2
@@ -137,8 +138,10 @@ jobs:
       - name: ls .
         shell: bash
         run: |
+          realpath .
           ls -l --almost-all --color=always --si --literal --group-directories-first
       - name: ls ..
         shell: bash
         run: |
+          realpath ..
           ls -l --almost-all --color=always --si --literal --group-directories-first ..
