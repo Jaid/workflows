@@ -21,6 +21,9 @@ on:
       output:
         description: The dynamically generated matrix in JSON
         value: ${{ jobs.job.outputs.output }}
+      nativeArch:
+        description: The dynamically generated matrix in JSON, filtered to only include native arch
+        value: ${{ jobs.job.outputs.nativeArch }}
 jobs:
   job:
     name: makeMatrix
@@ -28,114 +31,21 @@ jobs:
     permissions:
       contents: read
     outputs:
-      output: ${{ steps.makeMatrix.outputs.output }}
+      output: ${{ steps.makeMatrix.outputs.value }}
+      nativeArch: ${{ steps.makeMatrix.outputs.nativeArch }}
     steps:
       - name: setupNode
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v3.7.0
         with:
-          node-version: current
+          node-version: latest
+      - name: checkout
+        uses: actions/checkout@v3.5.2
       - name: installNodePackages
-        shell: bash
-        run: |
-          cd ..
-          npm install --no-package-lock --no-save @actions/core vm2 super-regex
+        id: installNodePackages
+        uses: jaid/action-npm-install@main
       - id: makeMatrix
-        shell: sh -c "node --input-type module < {0}"
+        name: makeMatrix
+        run: node --import tsx .github/workflows/makeDockerTagMatrix-overlay/makeMatrix.ts
         env:
           inputs: ${{ toJSON(inputs) }}
-        run: |
-          import core from '@actions/core'
-          import { matches, firstMatch } from 'super-regex'
-          import { VM } from "vm2";
-          const inputs = JSON.parse(process.env.inputs)
-          const flavorEval = inputs.flavorEval || `[
-            baseShortcuts[base],
-            platformShortcuts[platform] ?? platform.replaceAll('/', '_')
-          ].filter(part => part?.length).join('-')`
-
-          console.dir({
-            inputs,
-          })
-
-          const matchAll = (regex, string) => {
-            return Array.from(
-              matches(regex, string, {
-                matchTimeout: 60_000,
-              })
-            ).map((match) => match.namedGroups)
-          }
-
-          const runVm = (code, globals) => {
-            const vm = new VM({
-              sandbox: globals,
-              allowAsync: false,
-              timeout: 60_000,
-            });
-            return vm.run(code);
-          }
-
-          const bases = inputs.bases
-            ? matchAll(/(?<match>[\w-_:]+)/g, inputs.bases).map((match) => match.match)
-            : [''];
-          const platforms = inputs.platform
-            ? matchAll(/(?<match>[a-z0-9/]+)/g, inputs.platform).map((match) => match.match)
-            : ['linux/amd64', 'linux/arm64/v8']
-          const additions = inputs.additionEvals
-            ? inputs.additionEvals
-                .split("\n")
-                .map((line) => line.trim())
-                .filter((line) => line.length > 0)
-            : [];
-          const matrix = [];
-          for (const base of bases) {
-            for (const platform of platforms) {
-              const entry = {
-                platform,
-                base,
-              };
-              if (additions) {
-                for (const addition of additions) {
-                  const { key, code } = firstMatch(
-                    /^(?<key>\w+)\s*:\s*(?<code>.+)$/,
-                    addition
-                  ).namedGroups;
-                  entry[key] = runVm(code, {
-                    ...entry,
-                  });
-                }
-              }
-              const platformShortcuts = {
-                "linux/amd64": false,
-                "linux/arm/v7": "arm7",
-                "linux/arm64/v8": "arm8",
-                "linux/ppc64le": "ppc",
-                "linux/s390x": "s390x",
-                "linux/386": "386",
-              };
-              const baseShortcuts = {
-                "ubuntu:rolling": false,
-                "debian:stable-slim": "debian",
-                "ubuntu:latest": "lts",
-              };
-              entry.flavor = runVm(flavorEval, {
-                ...entry,
-                platformShortcuts,
-                baseShortcuts,
-              });
-              entry.buildArgs = Object.entries(entry).map(([key, value]) => `${key}=${value}`).join('\n')
-              entry.id = entry.flavor || 'default'
-              matrix.push(entry);
-            }
-          }
-
-          const output = JSON.stringify(matrix);
-
-          console.dir({
-            flavorEval,
-            platforms,
-            bases,
-            additions,
-            matrix,
-          });
-
-          core.setOutput('output', output);
+          arch: ${{ runner.arch }}

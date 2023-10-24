@@ -1,0 +1,150 @@
+on:
+  workflow_call:
+    inputs:
+      arch:
+        type: string
+        required: false
+        default: linux/amd64
+        description: Image arch to build and run
+      buildContext:
+        type: string
+        required: false
+        default: src
+      buildArgs:
+        type: string
+        required: false
+      imageFolder:
+        type: string
+        required: false
+        description: Folder to save the build to
+      imageFile:
+        type: string
+        required: false
+        description: File basename of image to save the build to
+      imageArtifact:
+        type: string
+        required: false
+        description: Name of the image artifact to save the build to
+      cacheTo:
+        type: string
+        required: false
+        description: Cache key to save the build to
+      cacheFrom:
+        type: string
+        required: false
+        description: Cache key to load the build from
+      cacheKey:
+        type: string
+        required: false
+        description: Cache key to seperate unrelated caches
+      imageName:
+        type: string
+        required: true
+        description: Name of the image to build
+      nameSuffix:
+        type: string
+        required: false
+        description: Suffix for job naming (just a visual thing)
+      tag:
+        type: string
+        required: false
+        description: Tag of the image to build
+        default: ci
+      id:
+        type: string
+        required: false
+        description: ID of the image
+    outputs:
+      inputs:
+        value: ${{ jobs.build.outputs.inputs }}
+      meta:
+        value: ${{ jobs.build.outputs.meta }}
+      imageFile:
+        value: ${{ jobs.build.outputs.imageFile }}
+      imageFolder:
+        value: ${{ jobs.build.outputs.imageFolder }}
+      imageArtifact:
+        value: ${{ jobs.build.outputs.imageArtifact }}
+      imagePath:
+        value: ${{ jobs.build.outputs.imagePath }}
+      cacheHint:
+        value: ${{ jobs.build.outputs.cacheHint }}
+      imageName:
+        value: ${{ jobs.build.outputs.imageName }}
+      imageIdentifier:
+        value: ${{ jobs.build.outputs.imageIdentifier }}
+      context:
+        value: ${{ jobs.build.outputs.context }}
+      buildArgs:
+        value: ${{ jobs.build.outputs.buildArgs }}
+jobs:
+  build:
+    name: build${{ inputs.nameSuffix }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      inputs: ${{ steps.getInputs.outputs.value }}
+      cacheHint: ${{ steps.getInputs.outputs.cacheHint }}
+      meta: ${{ steps.buildImage.outputs.metadata }}
+      imagePath: ${{ steps.getInputs.outputs.imagePath }}
+      imageFile: ${{ steps.getInputs.outputs.imageFile }}
+      imageFolder: ${{ steps.getInputs.outputs.imageFolder }}
+      imageArtifact: ${{ steps.getInputs.outputs.imageArtifact }}
+      imageName: ${{ steps.getInputs.outputs.imageName }}
+      imageIdentifier: ${{ steps.getInputs.outputs.imageIdentifier }}
+      context: ${{ steps.getInputs.outputs.buildContext }}
+      buildArgs: ${{ steps.getInputs.outputs.buildArgs }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3.5.3
+      - name: setupNode
+        uses: actions/setup-node@v3.7.0
+        with:
+          node-version: latest
+      - name: installNodePackages
+        id: installNodePackages
+        uses: jaid/action-npm-install@main
+      - id: getInputs
+        name: getInputs
+        env:
+          inputs: ${{ toJSON(inputs) }}
+          github: ${{ toJSON(github) }}
+        run: node --import tsx .github/workflows/buildDocker-overlay/getInputs.ts
+      - name: setupQemu
+        if: ${{ steps.getInputs.outputs.arch != 'linux/amd64' }}
+        uses: docker/setup-qemu-action@v2.2.0
+        with:
+          platforms: ${{ steps.getInputs.outputs.arch }}
+      - name: setupBuildx
+        uses: docker/setup-buildx-action@v2.9.1
+        with:
+          platforms: ${{ steps.getInputs.outputs.arch }}
+      - name: ensureImageFolder
+        shell: bash
+        env:
+          imageFolder: ${{ steps.getInputs.outputs.imageFolder }}
+        run: mkdir --parents "$imageFolder"
+      - name: buildImage
+        id: buildImage
+        uses: docker/build-push-action@v4.1.1
+        with:
+          context: ${{ steps.getInputs.outputs.buildContext }}
+          platforms: ${{ steps.getInputs.outputs.arch }}
+          build-args: ${{ steps.getInputs.outputs.buildArgs }}
+          outputs: type=docker,dest=${{ steps.getInputs.outputs.imagePath }}
+          cache-to: ${{ steps.getInputs.outputs.cacheTo }}
+          cache-from: ${{ steps.getInputs.outputs.cacheFrom }}
+          tags: ${{ steps.getInputs.outputs.imageIdentifier }}
+      - name: saveArtifact
+        if: ${{ steps.getInputs.outputs.imageArtifact }}
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          name: ${{ steps.getInputs.outputs.imageArtifact }}
+          path: ${{ steps.getInputs.outputs.imageFolder }}
+      - id: checkArtifact
+        shell: bash
+        env:
+          imageFolder: ${{ steps.getInputs.outputs.imageFolder }}
+        run: |
+          ls -l --almost-all --block-size 1 --color=always "$imageFolder"

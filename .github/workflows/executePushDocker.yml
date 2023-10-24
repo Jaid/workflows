@@ -1,0 +1,115 @@
+name: executePushDocker
+on:
+  workflow_call:
+    inputs:
+      passedInputs:
+        type: string
+        required: true
+        description: JSON object containing all parent inputs
+      matrixEntry:
+        type: string
+        required: true
+        description: JSON object containing all matrix values
+      nameSuffix:
+        type: string
+        required: false
+        description: Suffix to append to job names
+    secrets:
+      dockerHubToken:
+        required: false
+        description: 'Create here with “Read, Write”: https://hub.docker.com/settings/security?generateToken=true'
+    outputs:
+      meta:
+        value: ${{ jobs.push.outputs.meta }}
+      digest:
+        value: ${{ jobs.push.outputs.digest }}
+      imageId:
+        value: ${{ jobs.push.outputs.imageId }}
+      imageName:
+        value: ${{ jobs.push.outputs.imageName }}
+      imageSlug:
+        value: ${{ jobs.push.outputs.imageSlug }}
+      imageUser:
+        value: ${{ jobs.push.outputs.imageUser }}
+run-name: invoke${{ inputs.nameSuffix }}
+jobs:
+  getInputs:
+    name: getInputs${{ inputs.nameSuffix }}
+    runs-on: ubuntu-latest
+    outputs:
+      value: ${{ steps.getInputs.outputs.value }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3.5.2
+      - name: setupNode
+        uses: actions/setup-node@v3.7.0
+        with:
+          node-version: latest
+      - name: installNodePackages
+        id: installNodePackages
+        uses: jaid/action-npm-install@main
+      - id: getInputs
+        name: getInputs
+        run: node --import tsx .github/workflows/executePushDocker-overlay/getInputs.ts
+        env:
+          inputs: ${{ toJson(inputs) }}
+  build:
+    name: build${{ fromJson(needs.getInputs.outputs.value).nameSuffix }}
+    needs: getInputs
+    uses: ./.github/workflows/buildDocker-overlay.yml
+    with:
+      id: ${{ fromJson(needs.getInputs.outputs.value).matrixId }}
+      arch: ${{ fromJson(needs.getInputs.outputs.value).matrixPlatform }}
+      buildContext: ${{ fromJson(needs.getInputs.outputs.value).buildContext }}
+      buildArgs: ${{ fromJson(needs.getInputs.outputs.value).matrixBuildArgs }}
+      imageName: ${{ fromJson(needs.getInputs.outputs.value).imageName }}
+      nameSuffix: ${{ fromJson(needs.getInputs.outputs.value).nameSuffix }}
+  test:
+    name: test${{ fromJson(needs.getInputs.outputs.value).nameSuffix }}
+    needs:
+      - getInputs
+      - build
+    uses: ./.github/workflows/testDocker-overlay.yml
+    with:
+      id: ${{ fromJson(needs.getInputs.outputs.value).matrixId }}
+      dockerRunArgs: ${{ fromJson(needs.getInputs.outputs.value).testDockerRunArgs }}
+      appArgs: ${{ fromJson(needs.getInputs.outputs.value).testAppArgs }}
+      testEval: ${{ fromJson(needs.getInputs.outputs.value).testEval }}
+      imageFolder: ${{ needs.build.outputs.imageFolder }}
+      imageArtifact: ${{ needs.build.outputs.imageArtifact }}
+      imageFile: ${{ needs.build.outputs.imageFile }}
+      imageIdentifier: ${{ needs.build.outputs.imageIdentifier }}
+      nameSuffix: ${{ fromJson(needs.getInputs.outputs.value).nameSuffix }}
+      arch: ${{ fromJson(needs.getInputs.outputs.value).matrixPlatform }}
+  upload:
+    name: upload${{ fromJson(needs.getInputs.outputs.value).nameSuffix }}
+    needs:
+      - getInputs
+      - build
+      - test
+    permissions:
+      packages: write
+    uses: ./.github/workflows/uploadDocker-overlay.yml
+    with:
+      id: ${{ fromJson(needs.getInputs.outputs.value).matrixId }}
+      dockerHubUser: ${{ fromJson(needs.getInputs.outputs.value).dockerHubUser }}
+      dockerHubRegistry: ${{ fromJson(needs.getInputs.outputs.value).dockerHubRegistry }}
+      githubRegistry: ${{ fromJson(needs.getInputs.outputs.value).githubRegistry }}
+      baseTags: ${{ fromJson(needs.getInputs.outputs.value).baseTags }}
+      addShaTags: ${{ fromJson(needs.getInputs.outputs.value).addShaTags }}
+      addScheduleTags: ${{ fromJson(needs.getInputs.outputs.value).addScheduleTags }}
+      addVersionTag: ${{ fromJson(needs.getInputs.outputs.value).addVersionTag }}
+      versionTagPrefix: ${{ fromJson(needs.getInputs.outputs.value).versionTagPrefix }}
+      additionalTags: ${{ fromJson(needs.getInputs.outputs.value).additionalTags }}
+      versionTag: ${{ fromJson(needs.getInputs.outputs.value).versionTag }}
+      versionTagSemverPrefix: ${{ fromJson(needs.getInputs.outputs.value).versionTagSemverPrefix }}
+      flavorLatest: ${{ fromJson(needs.getInputs.outputs.value).flavorLatest }}
+      flavorPrefix: ${{ fromJson(needs.getInputs.outputs.value).flavorPrefix }}
+      flavorSuffix: ${{ fromJson(needs.getInputs.outputs.value).matrixFlavor || fromJson(needs.getInputs.outputs.value).flavorSuffix }}
+      flavorConnectionString: ${{ fromJson(needs.getInputs.outputs.value).flavorConnectionString }}
+      imageSlug: ${{ fromJson(needs.getInputs.outputs.value).imageSlug }}
+      arch: ${{ fromJson(needs.getInputs.outputs.value).matrixPlatform }}
+      buildOutput: ${{ toJson(needs.build.outputs) }}
+      nameSuffix: ${{ fromJson(needs.getInputs.outputs.value).nameSuffix }}
+    secrets:
+      dockerHubToken: ${{ secrets.dockerHubToken }}

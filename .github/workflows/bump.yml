@@ -73,10 +73,8 @@ jobs:
         with:
           node-version: current
       - name: installNodePackages
-        shell: bash
-        run: |
-          cd ..
-          npm install --no-package-lock --no-save @actions/core
+        id: installNodePackages
+        uses: jaid/action-npm-install@main
       - name: createTag
         id: createTag
         uses: anothrNick/github-tag-action@1.65.0
@@ -87,21 +85,9 @@ jobs:
           RELEASE_BRANCHES: ${{ inputs.releaseBranch }}
       - name: extractSemvers
         id: extractSemvers
-        shell: sh -c "node --input-type module < {0}"
+        run: node --import tsx .github/workflows/bump-overlay/extractSemvers.ts
         env:
           steps: ${{ toJson(steps) }}
-        run: |
-          import core from '@actions/core'
-          const steps = JSON.parse(process.env.steps)
-          const extractSemver = tag => {
-            return /(?<versionPrefix>v?)(?<version>\d+\.\d+\.\d+)/.exec(tag)?.groups
-          }
-          const newSemver = extractSemver(steps.createTag.outputs.new_tag)
-          console.dir({
-            newTag: steps.createTag.outputs.new_tag,
-            newSemver
-          })
-          core.setOutput('newSemver', newSemver?.version)
       - name: getReleaseTexts
         id: getReleaseTexts
         shell: bash
@@ -128,6 +114,17 @@ jobs:
           body: ${{ steps.getReleaseTexts.outputs.body }}
           tag: ${{ steps.createTag.outputs.new_tag }}
           makeLatest: ${{ inputs.makeLatest }}
+      - name: prepareDispatch
+        id: prepareDispatch
+        run: node --import tsx .github/workflows/bump-overlay/prepareDispatch.ts
+        env:
+          steps: ${{ toJson(steps) }}
+      - name: triggerDispatch
+        id: triggerDispatch
+        uses: peter-evans/repository-dispatch@v2.1.1
+        with:
+          event-type: bumped
+          client-payload: ${{ steps.prepareDispatch.outputs.value }}
     outputs:
       oldTag: ${{ steps.createTag.outputs.old_tag }}
       newTag: ${{ steps.createTag.outputs.new_tag }}

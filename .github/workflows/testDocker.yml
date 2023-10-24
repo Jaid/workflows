@@ -1,27 +1,12 @@
 on:
   workflow_call:
     inputs:
-      arch:
-        type: string
-        required: false
-        default: linux/amd64
-        description: Image arch to build and run
-      buildContext:
-        type: string
-        required: false
-        default: src
-      buildArgs:
-        type: string
-        required: false
-        default: ''
       dockerRunArgs:
         type: string
         required: false
-        default: ''
       appArgs:
         type: string
         required: false
-        default: ''
       testEval:
         type: string
         required: false
@@ -31,7 +16,6 @@ on:
         type: string
         required: false
         description: Folder to save the build to
-        default: /tmp/dockerTest/${{ github.run_id }}
       imageFile:
         type: string
         required: false
@@ -41,153 +25,61 @@ on:
         type: string
         required: false
         description: Name of the image artifact to save the build to
-      cacheTo:
+      imageIdentifier:
         type: string
         required: false
-        description: Cache key to save the build to
-        default: type=inline,mode=max,compression=zstd,compression-level=19
-      cacheFrom:
+        description: Name and tag of the image to test
+      nameSuffix:
         type: string
         required: false
-        description: Cache key to load the build from
-        default: type=gha
-      jobName:
+        description: Suffix to append to the job name
+      arch:
         type: string
         required: false
-        description: Name of the job to run
-        default: ${{ format('{0} → {1}', github.event_name, 'test') }}
-    outputs:
-      meta:
-        value: ${{ jobs.test.outputs.meta }}
-      imageFolder:
-        value: ${{ inputs.imageFolder }}
-      imageFile:
-        value: ${{ inputs.imageFile }}
-      imagePath:
-        value: ${{ jobs.test.outputs.imagePath }}
-      imageArtifact:
-        value: ${{ jobs.test.outputs.imageArtifact }}
-      cacheTo:
-        value: ${{ inputs.cacheTo }}
-      cacheFrom:
-        value: ${{ inputs.cacheFrom }}
+        description: Architecture to test
+        default: linux/amd64
+      id:
+        type: string
+        required: false
+        description: ID of the image
 jobs:
   test:
-    name: ${{ inputs.jobName }}
+    name: test${{ inputs.nameSuffix }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    outputs:
-      meta: ${{ steps.buildImage.outputs.metadata }}
-      imageArtifact: ${{ steps.getArtifactName.outputs.value }}
-      imagePath: ${{ steps.getImagePath.outputs.imagePath }}
     steps:
       - name: checkout
-        uses: actions/checkout@v3.5.2
+        uses: actions/checkout@v3.5.3
       - name: setupNode
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v3.7.0
         with:
-          node-version: current
+          node-version: latest
       - name: installNodePackages
+        id: installNodePackages
+        uses: jaid/action-npm-install@main
+      - id: getInputs
+        run: node --import tsx .github/workflows/testDocker-overlay/getInputs.ts
+        env:
+          inputs: ${{ toJSON(inputs) }}
+          github: ${{ toJSON(github) }}
+      - name: loadArtifact
+        uses: actions/download-artifact@v3.0.2
+        with:
+          name: ${{ steps.getInputs.outputs.imageArtifact }}
+          path: ${{ steps.getInputs.outputs.imageFolder }}
+      - name: loadImage
         shell: bash
+        env:
+          imageFolder: ${{ steps.getInputs.outputs.imageFolder }}
+          imageFile: ${{ steps.getInputs.outputs.imageFile }}
         run: |
-          cd ..
-          npm install --no-package-lock --no-save @actions/core read-file-string execa vm2 fs-extra
+            docker load --input "$imageFolder/$imageFile"
       - name: setupQemu
-        if: ${{ inputs.arch != 'linux/amd64' }}
-        uses: docker/setup-qemu-action@v2.1.0
+        if: ${{ steps.getInputs.outputs.arch != 'linux/amd64' }}
+        uses: docker/setup-qemu-action@v2.2.0
         with:
-          platforms: ${{ inputs.arch }}
-      - name: setupBuildx
-        uses: docker/setup-buildx-action@v2.5.0
-      - name: ensureImageFolder
-        run: mkdir --parents ${{ inputs.imageFolder }}
-      - id: getImagePath
-        shell: sh -c "node --input-type module < {0}"
-        env:
-          inputs: ${{ toJSON(inputs) }}
-        run: |
-          import core from '@actions/core'
-          import path from 'path'
-          const inputs = JSON.parse(process.env.inputs)
-          const imagePath = path.resolve(inputs.imageFolder, inputs.imageFile)
-          core.setOutput('imagePath', imagePath)
-      - name: buildImage
-        id: buildImage
-        uses: docker/build-push-action@v4.0.0
-        with:
-          context: ${{ inputs.buildContext }}
-          platforms: ${{ inputs.arch }}
-          build-args: ${{ inputs.buildArgs }}
-          outputs: type=docker,dest=${{ steps.getImagePath.outputs.imagePath }}
-          cache-to: ${{ inputs.cacheTo }}
-          cache-from: ${{ inputs.cacheFrom }}
-          tags: test
+          platforms: ${{ steps.getInputs.outputs.arch }}
       - id: runImage
-        if: ${{ inputs.arch == 'linux/amd64' }}
-        shell: sh -c "node --input-type module < {0}"
+        name: runImage
+        run: node --import tsx .github/workflows/testDocker-overlay/runImage.ts
         env:
-          inputs: ${{ toJSON(inputs) }}
-          imagePath: ${{ steps.getImagePath.outputs.imagePath }}
-        run: |
-          import core from '@actions/core'
-          import { execa } from 'execa'
-          import { VM } from 'vm2'
-          import fs from 'fs-extra'
-          import path from 'path'
-          const inputs = JSON.parse(process.env.inputs)
-          await execa('docker', ['load', '--input', process.env.imagePath], {all: true, verbose: true, stdio: 'inherit'})
-          const args = ['run', '--rm']
-          if (inputs.dockerRunArgs) {
-            args.push(...inputs.dockerRunArgs.split(' '))
-          }
-          args.push('test')
-          if (inputs.appArgs) {
-            args.push(...inputs.appArgs.split(' '))
-          }
-          const executionResult = await execa('docker', args, {all: true, verbose: true})
-          const sandboxGlobals = {
-            stdout: executionResult.stdout,
-            stderr: executionResult.stderr,
-            status: executionResult.exitCode,
-            fs,
-            executionResult,
-            inputs
-          }
-          console.dir(sandboxGlobals)
-          if (inputs.testEval) {
-            console.log(`Running validation expression: ${inputs.testEval}`)
-            const vm = new VM({
-              sandbox: sandboxGlobals
-            })
-            const validation = vm.run(inputs.testEval)
-            console.log(`Validation expression returned: ${validation}`)
-            if (!validation) {
-              throw new Error('Validation expression returned ' + validation)
-            }
-          }
-      - name: getArtifactName
-        id: getArtifactName
-        shell: sh -c "node --input-type module < {0}"
-        env:
-          inputs: ${{ toJSON(inputs) }}
-        run: |
-          import core from '@actions/core'
-          const inputs = JSON.parse(process.env.inputs)
-          if (inputs.imageArtifact) {
-            core.setOutput('value', inputs.imageArtifact)
-          } else {
-            core.setOutput('value', `${env.GITHUB_RUN_ID}-${inputs.platform}`)
-          }
-      - name: saveArtifact
-        if: ${{ inputs.imageArtifact }}
-        uses: actions/upload-artifact@v3.1.2
-        with:
-          name: ${{ steps.getArtifactName.outputs.value }}
-          path: ${{ inputs.imageFolder }}
-      - id: checkArtifact
-        shell: bash
-        env:
-          imageFolder: ${{ inputs.imageFolder }}
-        run: |
-          ls -l --almost-all --human-readable "$imageFolder"
+          inputs: ${{ steps.getInputs.outputs.value }}
