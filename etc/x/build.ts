@@ -35,6 +35,10 @@ for (const entry of entries) {
   await fs.copy(from, to)
 }
 await fs.outputJson(`dist/package/package.json`, {
-  ...lodash.pick(pkg, `name`, `version`, `description`),
+  ...lodash.pick(pkg, [
+    `name`,
+    `version`,
+    `description`,
+  ]),
   type: `module`,
 })
