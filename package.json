@@ -11,15 +11,18 @@
     "globby": "^13.2.2",
     "lodash-es": "^4.17.21",
     "prevent-start": "^1.0.5",
+    "read-file-json": "^1.1.0",
     "read-file-string": "^1.1.2",
     "sort-keys": "^5.0.0",
     "super-regex": "^0.2.0",
     "tsconfig-jaid-node": "^6.1.1",
     "tsx": "^3.14.0",
+    "type-fest": "^4.5.0",
     "vm2": "^3.9.19",
     "yaml": "^2.3.3"
   },
   "scripts": {
-    "build": "node --import tsx etc/x/build.ts"
+    "build": "node --import tsx etc/x/build.ts",
+    "package": "npm publish dist/package"
   }
 }

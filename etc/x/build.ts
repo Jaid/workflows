@@ -1,6 +1,10 @@
+import type {PackageJson} from 'type-fest'
+
 import {execa} from 'execa'
 import fs from 'fs-extra'
 import {globby} from 'globby'
+import * as lodash from 'lodash-es'
+import readFileJson from 'read-file-json'
 import {firstMatch} from 'super-regex'
 
 type Entry = {
@@ -9,9 +13,8 @@ type Entry = {
   rootFolder: string
 }
 
+const pkg = <PackageJson> await readFileJson.default(`package.json`)
 try {
-  // only compile files in src/**
-  // dont emit tsd
   await execa(`tsc`)
 } catch (error) {
   console.error(error)
@@ -28,6 +31,10 @@ const entries = files.map(file => {
 for (const entry of entries) {
   const {fileBase, folderName, rootFolder} = entry
   const from = `${rootFolder}/${folderName}/${fileBase}.js`
-  const to = `dist/build/${folderName}/${fileBase}.js`
+  const to = `dist/package/${folderName}/${fileBase}.js`
   await fs.copy(from, to)
 }
+await fs.outputJson(`dist/package/package.json`, {
+  ...lodash.pick(pkg, `name`, `version`, `description`),
+  type: `module`,
+})

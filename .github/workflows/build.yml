@@ -23,12 +23,10 @@ jobs:
       - id: build
         name: build
         run: npm run build
-      - name: s0/git-publish-subdir-action
-        uses: s0/git-publish-subdir-action@v2.6.0
-        env:
-          REPO: self
-          BRANCH: dist
-          FOLDER: dist/build
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MESSAGE: "Build: ({sha}) {msg}"
-          SKIP_EMPTY_COMMITS: true
+      - id: publish
+        name: publish
+        uses: jaid/action-publish@main
+        with:
+          npmPrepareScript: build
+          publishDirectory: dist/package
+          npmRegistry: https://npm.pkg.github.com
