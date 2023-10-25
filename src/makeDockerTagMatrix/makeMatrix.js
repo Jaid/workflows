@@ -8,7 +8,8 @@ const setOutput = (value, name = `value`) => {
     core.setOutput(name, value);
     core.info(`Output ${name}: ${value}`);
 };
-const flavorEval = inputs.flavorEval ?? `[
+// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+const flavorEval = inputs.flavorEval || `[
   baseShortcuts[base] ?? base,
   platformShortcuts[platform] ?? platform.replaceAll('/', '_')
 ].filter(part => part?.length).join('-')`;
