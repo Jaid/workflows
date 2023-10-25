@@ -38,5 +38,4 @@ jobs:
         with:
           npmPrepareScript: build
           publishDirectory: dist/package
-          # npmRegistry: https://npm.pkg.github.com
           githubToken: ${{ secrets.GITHUB_TOKEN }}

@@ -36,9 +36,9 @@ for (const entry of entries) {
 }
 await fs.outputJson(`dist/package/package.json`, {
   ...lodash.pick(pkg, [
-    `name`,
     `version`,
     `description`,
   ]),
+  name: `@jaid/workflows-scripts`,
   type: `module`,
 })
