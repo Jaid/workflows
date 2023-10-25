@@ -3,33 +3,42 @@ import {firstMatch, matches} from 'super-regex'
 import {VM} from 'vm2'
 import yaml from 'yaml'
 
-const inputs = JSON.parse(process.env.inputs!)
+type Input = {
+  additionEvals?: string
+  bases?: string
+  flavorEval?: string
+  platform?: string
+}
+type GithubRunnerArch = `arm` | `arm64` | `x64`
+type DockerArch = 'linux/386' | 'linux/amd64' | 'linux/arm/v5' | 'linux/arm/v7' | 'linux/arm64/v8' | 'linux/mips64le' | 'linux/ppc64le' | 'linux/ppc64le' | 'linux/riscv64' | 'linux/s390x'
+
+const inputs = <Input> JSON.parse(process.env.inputs!)
+const currentArch = <GithubRunnerArch> process.env.arch!.toLowerCase()
 const setOutput = (value, name = `value`) => {
   core.setOutput(name, value)
   core.info(`Output ${name}: ${value}`)
 }
-const flavorEval = inputs.flavorEval || `[
+const flavorEval = inputs.flavorEval ?? `[
   baseShortcuts[base] ?? base,
   platformShortcuts[platform] ?? platform.replaceAll('/', '_')
 ].filter(part => part?.length).join('-')`
 console.dir({
   inputs,
 })
-const matchAll = (regex, string) => {
+const matchAll = (regex: RegExp, string: string) => {
   return [...matches(regex, string, {
     matchTimeout: 60_000,
   })].map(match => match.namedGroups)
 }
-const runVm = (code, globals) => {
+const runVm = (code: string, globals: Record<string, unknown>) => {
   const vm = new VM({
     allowAsync: false,
     sandbox: globals,
     timeout: 60_000,
   })
-  return vm.run(code)
+  return <unknown> vm.run(code)
 }
-const compareNativeArch = platform => {
-  const currentArch = process.env.arch.toLowerCase()
+const compareNativeArch = (platform: DockerArch) => {
   if (currentArch === `x64`) {
     return platform === `linux/amd64`
   }
@@ -42,10 +51,10 @@ const compareNativeArch = platform => {
   return false
 }
 const bases = inputs.bases
-  ? matchAll(/(?<match>[\w-:]+)/g, inputs.bases).map(match => match.match)
+  ? matchAll(/(?<match>[\w\-:]+)/g, inputs.bases).map(match => match.match)
   : [``]
-const platforms = inputs.platform
-  ? matchAll(/(?<match>[\d/a-z]+)/g, inputs.platform).map(match => match.match)
+const platforms = <DockerArch[]> <unknown> inputs.platform
+  ? matchAll(/(?<match>[\d/a-z]+)/g, inputs.platform!).map(match => match.match)
   : [`linux/amd64`]
 const additions = inputs.additionEvals
   ? inputs.additionEvals
@@ -57,15 +66,14 @@ const matrix = []
 const nativeArchMatrix = []
 for (const base of bases) {
   for (const platform of platforms) {
-    const entry = {
+    const entry: Record<string, unknown> = {
       base,
       platform,
     }
     entry.isNativeArch = compareNativeArch(entry.platform)
     if (additions) {
       for (const addition of additions) {
-        const {code, key} = firstMatch(/^(?<key>\w+)\s*:\s*(?<code>.+)$/,
-          addition).namedGroups
+        const {code, key} = firstMatch(/^(?<key>\w+)\s*:\s*(?<code>.+)$/, addition)!.namedGroups
         entry[key] = runVm(code, {
           ...entry,
         })
@@ -77,6 +85,7 @@ for (const base of bases) {
       'linux/arm/v7': `arm7`,
       'linux/arm64/v8': `arm8`,
       'linux/ppc64le': `ppc`,
+      'linux/riscv64': `riscv`,
       'linux/s390x': `s390x`,
     }
     const baseShortcuts = {
@@ -100,7 +109,7 @@ for (const base of bases) {
 setOutput(JSON.stringify(matrix))
 setOutput(JSON.stringify(nativeArchMatrix), `nativeArch`)
 console.log(`Matrix:`)
-const toYaml = input => yaml.stringify(input, null, {
+const toYaml = (input: unknown) => yaml.stringify(input, null, {
   lineWidth: 0,
   minContentWidth: 0,
   nullStr: `~`,
