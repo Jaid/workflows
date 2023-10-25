@@ -22,7 +22,6 @@
     "yaml": "^2.3.3"
   },
   "scripts": {
-    "build": "node --import tsx etc/x/build.ts",
-    "package": "npm publish dist/package"
+    "build": "node --import tsx etc/x/build.ts"
   }
 }
