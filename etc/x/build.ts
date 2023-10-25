@@ -13,6 +13,15 @@ type Entry = {
   rootFolder: string
 }
 
+const fieldsFromPkg = [
+  `version`,
+  `description`,
+  `dependencies`,
+]
+const filesToCopy = [
+  `readme.md`,
+  `license.txt`,
+]
 const pkg = <PackageJson> await readFileJson.default(`package.json`)
 try {
   await execa(`tsc`)
@@ -31,14 +40,14 @@ const entries = files.map(file => {
 for (const entry of entries) {
   const {fileBase, folderName, rootFolder} = entry
   const from = `${rootFolder}/${folderName}/${fileBase}.js`
-  const to = `dist/package/${folderName}/${fileBase}.js`
+  const to = `dist/package/src/${folderName}/${fileBase}.js`
   await fs.copy(from, to)
 }
 await fs.outputJson(`dist/package/package.json`, {
-  ...lodash.pick(pkg, [
-    `version`,
-    `description`,
-  ]),
+  ...lodash.pick(pkg, fieldsFromPkg),
   name: `@jaid/workflows-scripts`,
   type: `module`,
 })
+for (const file of filesToCopy) {
+  await fs.copy(file, `dist/package/${file}`)
+}
