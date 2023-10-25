@@ -43,6 +43,9 @@ jobs:
       - name: installNodePackages
         id: installNodePackages
         uses: jaid/action-npm-install@main
+      - id: installWorkflowsScripts
+        name: installWorkflowsScripts
+        run: npm install --no-save --no-package-lock git://github.com/jaid/workflows.git#dist
       - id: makeMatrix
         name: makeMatrix
         run: node --import tsx .github/workflows/makeDockerTagMatrix/makeMatrix.ts
