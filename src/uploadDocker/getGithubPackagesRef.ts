@@ -1,7 +1,8 @@
 import * as core from '@actions/core'
-import { context } from '@actions/github'
+import {context} from '@actions/github'
+
 const inputs = JSON.parse(process.env.inputs!)
-const setOutput = (value:string, name = 'value') => {
+const setOutput = (value: string, name = `value`) => {
   core.setOutput(name, value)
   core.info(`Output ${name}: ${value}`)
 }

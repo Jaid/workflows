@@ -74,25 +74,25 @@ jobs:
       repoTag: ${{ steps.createTag.outputs.new_tag }}
       dockerTag: ${{ steps.convertGitTagToDockerTag.outputs.dockerTag }}
     steps:
-      - name: checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: createTag
-        id: createTag
-        uses: anothrNick/github-tag-action@1.65.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WITH_V: true
-          DEFAULT_BUMP: ${{ inputs.bumpAmount }}
-          RELEASE_BRANCHES: ${{ inputs.releaseBranch }}
-      - name: convertGitTagToDockerTag
-        id: convertGitTagToDockerTag
-        shell: bash
-        run: |
-          gitTag=${{ steps.createTag.outputs.new_tag }}
-          dockerTag=${gitTag##v}
-          printf 'dockerTag=%s' "$dockerTag" > $GITHUB_OUTPUT
+    - name: checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: createTag
+      id: createTag
+      uses: anothrNick/github-tag-action@1.65.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        WITH_V: true
+        DEFAULT_BUMP: ${{ inputs.bumpAmount }}
+        RELEASE_BRANCHES: ${{ inputs.releaseBranch }}
+    - name: convertGitTagToDockerTag
+      id: convertGitTagToDockerTag
+      shell: bash
+      run: |
+        gitTag=${{ steps.createTag.outputs.new_tag }}
+        dockerTag=${gitTag##v}
+        printf 'dockerTag=%s' "$dockerTag" > $GITHUB_OUTPUT
   build: # outputs imageSlug, imageName, digest, metadata
     needs: prepare
     uses: jaid/workflows/.github/workflows/pushDocker.yml@main
@@ -116,25 +116,25 @@ jobs:
       dockerHubToken: ${{ secrets.dockerHubToken }}
   finish:
     needs:
-      - prepare
-      - build
+    - prepare
+    - build
     runs-on: ubuntu-latest
     steps:
-      - name: queryDockerHub
-        id: queryDockerHub
-        shell: bash
-        run: |
-          json=$(curl --silent --fail --retry 30 --retry-max-time 1800 --location https://hub.docker.com/v2/namespaces/${{ inputs.dockerHubUser }}/repositories/${{ needs.build.outputs.imageName }}/tags/${{ needs.prepare.outputs.dockerTag }})
-          size=$(jq --raw-output '.images[0].size' <<<"$json" | numfmt --to=si --suffix=b)
-          digest=$(jq --raw-output '.images[0].digest | ltrimstr("sha256:")' <<<"$json")
-          arch=$(jq --raw-output '.images[0].architecture' <<<"$json")
-          printf 'size=%s\ndigest=%s\narch=%s' "$size" "$digest" "$arch" > $GITHUB_OUTPUT
-      - name: updateRelease
-        uses: ncipollo/release-action@v1.11.0
-        with:
-          allowUpdates: true
-          tag: ${{ needs.prepare.outputs.repoTag }}
-          name: ${{ needs.prepare.outputs.dockerTag }} (${{ inputs.bumpAmount }})
-          body: |
-            # 🐋 ${{ needs.build.outputs.imageSlug }} ${{ needs.prepare.outputs.repoTag }}
-            [![DockerHub version reference](https://img.shields.io/badge/DockerHub-${{ needs.prepare.outputs.dockerTag }}-1c90ed?logo=docker&logoColor=white&style=flat-square)](https://hub.docker.com/layers/${{ needs.build.outputs.imageSlug }}/${{ needs.prepare.outputs.dockerTag }}/images/sha256-${{ steps.queryDockerHub.outputs.digest }}) [![DockerHub version size](https://img.shields.io/badge/${{ needs.prepare.outputs.repoTag }}_${{ steps.queryDockerHub.outputs.arch }}_size-${{ steps.queryDockerHub.outputs.size }}-1c90ed?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNCAxMS4yIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMi40NSAyLjFhLjcuNyAwIDAgMSAuNy0uN2guMzVhLjcuNyAwIDAgMSAuNy43djdhLjcuNyAwIDAgMS0uNy43aC0uMzVhLjcuNyAwIDAgMS0uNy0uN3YtLjdIMS40YS43LjcgMCAwIDEtLjctLjdWNi4zYS43LjcgMCAxIDEgMC0xLjRWMy41YS43LjcgMCAwIDEgLjctLjdoMS4wNXYtLjd6bTkuMSAwdi43aDEuMDVhLjcuNyAwIDAgMSAuNy43djEuNGEuNy43IDAgMSAxIDAgMS40djEuNGEuNy43IDAgMCAxLS43LjdoLTEuMDV2LjdhLjcuNyAwIDAgMS0uNy43aC0uMzVhLjcuNyAwIDAgMS0uNy0uN3YtN2EuNy43IDAgMCAxIC43LS43aC4zNWEuNy43IDAgMCAxIC43Ljd6TTkuMSA0Ljl2MS40SDQuOVY0LjloNC4yeiIvPjwvc3ZnPg==)](https://hub.docker.com/layers/${{ needs.build.outputs.imageSlug }}/${{ needs.prepare.outputs.dockerTag }}/images/sha256-${{ steps.queryDockerHub.outputs.digest }})
+    - name: queryDockerHub
+      id: queryDockerHub
+      shell: bash
+      run: |
+        json=$(curl --silent --fail --retry 30 --retry-max-time 1800 --location https://hub.docker.com/v2/namespaces/${{ inputs.dockerHubUser }}/repositories/${{ needs.build.outputs.imageName }}/tags/${{ needs.prepare.outputs.dockerTag }})
+        size=$(jq --raw-output '.images[0].size' <<<"$json" | numfmt --to=si --suffix=b)
+        digest=$(jq --raw-output '.images[0].digest | ltrimstr("sha256:")' <<<"$json")
+        arch=$(jq --raw-output '.images[0].architecture' <<<"$json")
+        printf 'size=%s\ndigest=%s\narch=%s' "$size" "$digest" "$arch" > $GITHUB_OUTPUT
+    - name: updateRelease
+      uses: ncipollo/release-action@v1.11.0
+      with:
+        allowUpdates: true
+        tag: ${{ needs.prepare.outputs.repoTag }}
+        name: ${{ needs.prepare.outputs.dockerTag }} (${{ inputs.bumpAmount }})
+        body: |
+          # 🐋 ${{ needs.build.outputs.imageSlug }} ${{ needs.prepare.outputs.repoTag }}
+          [![DockerHub version reference](https://img.shields.io/badge/DockerHub-${{ needs.prepare.outputs.dockerTag }}-1c90ed?logo=docker&logoColor=white&style=flat-square)](https://hub.docker.com/layers/${{ needs.build.outputs.imageSlug }}/${{ needs.prepare.outputs.dockerTag }}/images/sha256-${{ steps.queryDockerHub.outputs.digest }}) [![DockerHub version size](https://img.shields.io/badge/${{ needs.prepare.outputs.repoTag }}_${{ steps.queryDockerHub.outputs.arch }}_size-${{ steps.queryDockerHub.outputs.size }}-1c90ed?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNCAxMS4yIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMi40NSAyLjFhLjcuNyAwIDAgMSAuNy0uN2guMzVhLjcuNyAwIDAgMSAuNy43djdhLjcuNyAwIDAgMS0uNy43aC0uMzVhLjcuNyAwIDAgMS0uNy0uN3YtLjdIMS40YS43LjcgMCAwIDEtLjctLjdWNi4zYS43LjcgMCAxIDEgMC0xLjRWMy41YS43LjcgMCAwIDEgLjctLjdoMS4wNXYtLjd6bTkuMSAwdi43aDEuMDVhLjcuNyAwIDAgMSAuNy43djEuNGEuNy43IDAgMSAxIDAgMS40djEuNGEuNy43IDAgMCAxLS43LjdoLTEuMDV2LjdhLjcuNyAwIDAgMS0uNy43aC0uMzVhLjcuNyAwIDAgMS0uNy0uN3YtN2EuNy43IDAgMCAxIC43LS43aC4zNWEuNy43IDAgMCAxIC43Ljd6TTkuMSA0Ljl2MS40SDQuOVY0LjloNC4yeiIvPjwvc3ZnPg==)](https://hub.docker.com/layers/${{ needs.build.outputs.imageSlug }}/${{ needs.prepare.outputs.dockerTag }}/images/sha256-${{ steps.queryDockerHub.outputs.digest }})

@@ -1,34 +1,35 @@
 import * as core from '@actions/core'
-import { context } from '@actions/github'
-import sortKeys from 'sort-keys'
+import {context} from '@actions/github'
 import {camelCase, omit} from 'lodash-es'
 import preventStart from 'prevent-start'
+import sortKeys from 'sort-keys'
+
 const inputs = JSON.parse(process.env.inputs!)
 const passedInputs = JSON.parse(inputs.passedInputs)
 const matrixEntry = JSON.parse(inputs.matrixEntry)
 if (core.isDebug()) {
   console.dir({
+    context,
     inputs,
-    passedInputs,
     matrixEntry,
-    context
+    passedInputs,
   })
 }
-const setOutput = (value, name = 'value') => {
+const setOutput = (value, name = `value`) => {
   core.setOutput(name, value)
   core.info(`Output ${name}: ${value}`)
 }
-console.dir(omit(inputs, ['passedInputs', 'matrixEntry']))
+console.dir(omit(inputs, [`passedInputs`, `matrixEntry`]))
 const outputs = {
-  ...omit(inputs, ['passedInputs', 'matrixEntry']),
-  ...passedInputs
+  ...omit(inputs, [`passedInputs`, `matrixEntry`]),
+  ...passedInputs,
 }
 for (const [key, value] of Object.entries(matrixEntry)) {
   const exclusiveKey = camelCase(`matrix ${key}`)
   outputs[exclusiveKey] = value
 }
 if (!outputs.imageName) {
-  outputs.imageName = preventStart.default(context.payload.repository.name.toLowerCase(), 'docker-')
+  outputs.imageName = preventStart.default(context.payload.repository.name.toLowerCase(), `docker-`)
 }
 if (!outputs.imageUser) {
   outputs.imageUser = context.payload.repository.owner.login.toLowerCase()
@@ -43,10 +44,10 @@ if (!outputs.imageFolder) {
   outputs.imageFolder = `/tmp/dockerBuild/${context.runId}_${outputs.matrixId}`
 }
 if (!outputs.nameSuffix) {
-  if (outputs.matrixId && outputs.matrixId !== 'default') {
+  if (outputs.matrixId && outputs.matrixId !== `default`) {
     outputs.nameSuffix = ` (${outputs.matrixId})`
   } else {
-    outputs.nameSuffix = ''
+    outputs.nameSuffix = ``
   }
 }
 for (const [key, value] of Object.entries(sortKeys(outputs))) {

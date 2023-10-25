@@ -1,12 +1,13 @@
 import * as core from '@actions/core'
+
 const inputs = JSON.parse(process.env.inputs)
-const setOutput = (value, name = 'value') => {
+const setOutput = (value, name = `value`) => {
   core.setOutput(name, value)
   core.info(`Output ${name}: ${value}`)
 }
 const getCleanedVersionTag = tag => {
   if (!tag) {
-    return ''
+    return ``
   }
   if (inputs.versionTagSemverPrefix == null) {
     return tag
