@@ -57,7 +57,7 @@ jobs:
         id: installNodePackages
         uses: jaid/action-npm-install@main
       - id: getInputs
-        run: node --import tsx .github/workflows/testDocker-overlay/getInputs.ts
+        run: node --import tsx .github/workflows/testDocker/getInputs.ts
         env:
           inputs: ${{ toJSON(inputs) }}
           github: ${{ toJSON(github) }}
@@ -80,6 +80,6 @@ jobs:
           platforms: ${{ steps.getInputs.outputs.arch }}
       - id: runImage
         name: runImage
-        run: node --import tsx .github/workflows/testDocker-overlay/runImage.ts
+        run: node --import tsx .github/workflows/testDocker/runImage.ts
         env:
           inputs: ${{ steps.getInputs.outputs.value }}

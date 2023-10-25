@@ -110,7 +110,7 @@ jobs:
         env:
           inputs: ${{ toJSON(inputs) }}
           github: ${{ toJSON(github) }}
-        run: node --import tsx .github/workflows/buildDocker-overlay/getInputs.ts
+        run: node --import tsx .github/workflows/buildDocker/getInputs.ts
       - name: setupQemu
         if: ${{ steps.getInputs.outputs.arch != 'linux/amd64' }}
         uses: docker/setup-qemu-action@v2.2.0

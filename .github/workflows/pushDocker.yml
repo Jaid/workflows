@@ -130,7 +130,7 @@ on:
 jobs:
   makeMatrix:
     name: makeMatrix
-    uses: ./.github/workflows/makeDockerTagMatrix-overlay.yml
+    uses: ./.github/workflows/makeDockerTagMatrix.yml
     with:
       bases: ${{ inputs.matrixBases }}
       platform: ${{ inputs.matrixPlatform }}
@@ -143,7 +143,7 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJson(needs.makeMatrix.outputs.output) }}
-    uses: ./.github/workflows/executePushDocker-overlay.yml
+    uses: ./.github/workflows/executePushDocker.yml
     with:
       passedInputs: ${{ toJson(inputs) }}
       matrixEntry: ${{ toJson(matrix) }}

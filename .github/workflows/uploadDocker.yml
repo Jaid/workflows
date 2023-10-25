@@ -110,41 +110,41 @@ jobs:
         uses: jaid/action-npm-install@main
       - id: getInputs
         name: getInputs
-        run: node --import tsx .github/workflows/uploadDocker-overlay/getInputs.ts
+        run: node --import tsx .github/workflows/uploadDocker/getInputs.ts
         env:
           inputs: ${{ toJSON(inputs) }}
       - name: getDockerHubTokenLength
         id: getDockerHubTokenLength
-        run: node --import tsx .github/workflows/uploadDocker-overlay/getDockerHubTokenLength.ts
+        run: node --import tsx .github/workflows/uploadDocker/getDockerHubTokenLength.ts
         env:
           secrets: ${{ toJSON(secrets) }}
       - name: getGithubPackagesRef
         id: getGithubPackagesRef
-        run: node --import tsx .github/workflows/uploadDocker-overlay/getGithubPackagesRef.ts
+        run: node --import tsx .github/workflows/uploadDocker/getGithubPackagesRef.ts
         env:
           inputs: ${{ steps.getInputs.outputs.value }}
       - name: getDockerHubRef
         id: getDockerHubRef
         if: ${{ steps.getDockerHubTokenLength.outputs.value > 0 }}
-        run: node --import tsx .github/workflows/uploadDocker-overlay/getDockerHubRef.ts
+        run: node --import tsx .github/workflows/uploadDocker/getDockerHubRef.ts
         env:
           inputs: ${{ steps.getInputs.outputs.value }}
           dockerHubTokenLength: ${{ steps.getDockerHubTokenLength.outputs.value }}
       - name: getRefs
         id: getRefs
-        run: node --import tsx .github/workflows/uploadDocker-overlay/getRefs.ts
+        run: node --import tsx .github/workflows/uploadDocker/getRefs.ts
         env:
           inputs: ${{ steps.getInputs.outputs.value }}
           githubRef: ${{ steps.getGithubPackagesRef.outputs.value }}
           dockerHubRef: ${{ steps.getDockerHubRef.outputs.value }}
       - name: prepareVersionTag
         id: prepareVersionTag
-        run: node --import tsx .github/workflows/uploadDocker-overlay/prepareVersionTag.ts
+        run: node --import tsx .github/workflows/uploadDocker/prepareVersionTag.ts
         env:
           inputs: ${{ steps.getInputs.outputs.value }}
       - name: getTags
         id: getTags
-        run: node --import tsx .github/workflows/uploadDocker-overlay/getTags.ts
+        run: node --import tsx .github/workflows/uploadDocker/getTags.ts
         env:
           inputs: ${{ steps.getInputs.outputs.value }}
           versionTag: ${{ steps.prepareVersionTag.outputs.value }}

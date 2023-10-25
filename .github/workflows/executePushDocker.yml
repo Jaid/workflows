@@ -50,13 +50,13 @@ jobs:
         uses: jaid/action-npm-install@main
       - id: getInputs
         name: getInputs
-        run: node --import tsx .github/workflows/executePushDocker-overlay/getInputs.ts
+        run: node --import tsx .github/workflows/executePushDocker/getInputs.ts
         env:
           inputs: ${{ toJson(inputs) }}
   build:
     name: build${{ fromJson(needs.getInputs.outputs.value).nameSuffix }}
     needs: getInputs
-    uses: ./.github/workflows/buildDocker-overlay.yml
+    uses: ./.github/workflows/buildDocker.yml
     with:
       id: ${{ fromJson(needs.getInputs.outputs.value).matrixId }}
       arch: ${{ fromJson(needs.getInputs.outputs.value).matrixPlatform }}
@@ -69,7 +69,7 @@ jobs:
     needs:
       - getInputs
       - build
-    uses: ./.github/workflows/testDocker-overlay.yml
+    uses: ./.github/workflows/testDocker.yml
     with:
       id: ${{ fromJson(needs.getInputs.outputs.value).matrixId }}
       dockerRunArgs: ${{ fromJson(needs.getInputs.outputs.value).testDockerRunArgs }}
@@ -89,7 +89,7 @@ jobs:
       - test
     permissions:
       packages: write
-    uses: ./.github/workflows/uploadDocker-overlay.yml
+    uses: ./.github/workflows/uploadDocker.yml
     with:
       id: ${{ fromJson(needs.getInputs.outputs.value).matrixId }}
       dockerHubUser: ${{ fromJson(needs.getInputs.outputs.value).dockerHubUser }}

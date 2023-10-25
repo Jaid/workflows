@@ -45,7 +45,7 @@ jobs:
         uses: jaid/action-npm-install@main
       - id: makeMatrix
         name: makeMatrix
-        run: node --import tsx .github/workflows/makeDockerTagMatrix-overlay/makeMatrix.ts
+        run: node --import tsx .github/workflows/makeDockerTagMatrix/makeMatrix.ts
         env:
           inputs: ${{ toJSON(inputs) }}
           arch: ${{ runner.arch }}
