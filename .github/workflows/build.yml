@@ -12,9 +12,9 @@ jobs:
     steps:
       - id: checkout
         name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4.1.1
       - name: setupNode
-        uses: actions/setup-node@v3.7.0
+        uses: actions/setup-node@v4.0.0
         with:
           node-version: latest
       - name: installNodePackages

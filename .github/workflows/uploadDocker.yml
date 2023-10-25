@@ -100,9 +100,9 @@ jobs:
       packages: write
     steps:
       - name: checkout
-        uses: actions/checkout@v3.5.3
+        uses: actions/checkout@v4.1.1
       - name: setupNode
-        uses: actions/setup-node@v3.7.0
+        uses: actions/setup-node@v4.0.0
         with:
           node-version: latest
       - name: installNodePackages
@@ -153,12 +153,12 @@ jobs:
           versionTag: ${{ steps.prepareVersionTag.outputs.value }}
       - name: login (${{ steps.getInputs.outputs.dockerHubUser }} @ ${{ steps.getInputs.outputs.dockerHubRegistry }})
         if: ${{ steps.getDockerHubTokenLength.outputs.length > 0 }}
-        uses: docker/login-action@v2.2.0
+        uses: docker/login-action@v3.0.0
         with:
           username: ${{ steps.getInputs.outputs.dockerHubUser }}
           password: ${{ secrets.dockerHubToken }}
       - name: login (${{ github.repository_owner }} @ ${{ steps.getInputs.outputs.githubRegistry }})
-        uses: docker/login-action@v2.2.0
+        uses: docker/login-action@v3.0.0
         with:
           registry: ${{ steps.getInputs.outputs.githubRegistry }}
           username: ${{ github.repository_owner }}
@@ -179,16 +179,16 @@ jobs:
             suffix=${{ steps.getInputs.outputs.flavorSuffix && format('{0}{1}', steps.getInputs.outputs.flavorConnectionString, steps.getInputs.outputs.flavorSuffix) || '' }}
       - name: setupQemu
         if: ${{ steps.getInputs.outputs.arch != 'linux/amd64' }}
-        uses: docker/setup-qemu-action@v2.2.0
+        uses: docker/setup-qemu-action@v3.0.0
         with:
           platforms: ${{ steps.getInputs.outputs.arch }}
       - name: setupBuildx
-        uses: docker/setup-buildx-action@v2.9.1
+        uses: docker/setup-buildx-action@v3.0.0
         with:
           platforms: ${{ steps.getInputs.outputs.arch }}
       - name: dockerPush
         id: dockerPush
-        uses: docker/build-push-action@v4.1.1
+        uses: docker/build-push-action@v5.0.0
         with:
           push: true
           platforms: ${{ steps.getInputs.outputs.arch }}

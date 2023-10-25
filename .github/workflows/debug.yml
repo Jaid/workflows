@@ -8,7 +8,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: setupNode
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.0
         with:
           node-version: current
       - name: prepare
@@ -21,7 +21,7 @@ jobs:
           printf 'workspaceFolder=%s\n' "$(realpath "$GITHUB_WORKSPACE")" >> $GITHUB_OUTPUT
           printf 'tempFolder=%s\n' "$(realpath "$RUNNER_TEMP")" >> $GITHUB_OUTPUT
       - name: checkout
-        uses: actions/checkout@v3.5.2
+        uses: actions/checkout@v4.1.1
       - name: installNodePackages
         id: installNodePackages
         uses: jaid/action-npm-install@main

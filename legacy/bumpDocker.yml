@@ -130,7 +130,7 @@ jobs:
         arch=$(jq --raw-output '.images[0].architecture' <<<"$json")
         printf 'size=%s\ndigest=%s\narch=%s' "$size" "$digest" "$arch" > $GITHUB_OUTPUT
     - name: updateRelease
-      uses: ncipollo/release-action@v1.11.0
+      uses: ncipollo/release-action@v1.13.0
       with:
         allowUpdates: true
         tag: ${{ needs.prepare.outputs.repoTag }}

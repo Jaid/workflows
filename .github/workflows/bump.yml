@@ -65,11 +65,11 @@ jobs:
       contents: write
     steps:
       - name: checkout
-        uses: actions/checkout@v3.5.2
+        uses: actions/checkout@v4.1.1
         with:
           fetch-depth: 0
       - name: setupNode
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.0.0
         with:
           node-version: current
       - name: installNodePackages
@@ -110,7 +110,7 @@ jobs:
           fi
       - name: updateRelease
         id: updateRelease
-        uses: ncipollo/release-action@v1.12.0
+        uses: ncipollo/release-action@v1.13.0
         with:
           allowUpdates: true
           name: ${{ steps.getReleaseTexts.outputs.title }}
@@ -124,7 +124,7 @@ jobs:
           steps: ${{ toJson(steps) }}
       - name: triggerDispatch
         id: triggerDispatch
-        uses: peter-evans/repository-dispatch@v2.1.1
+        uses: peter-evans/repository-dispatch@v2.1.2
         with:
           event-type: bumped
           client-payload: ${{ steps.prepareDispatch.outputs.value }}
