@@ -13,6 +13,9 @@ jobs:
       - id: checkout
         name: checkout
         uses: actions/checkout@v2
+      - name: installNodePackages
+        id: installNodePackages
+        uses: jaid/action-npm-install@main
       - id: build
         name: build
         run: npm run build
