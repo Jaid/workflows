@@ -1,0 +1,27 @@
+name: pushDocker
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: 45 23 * * 0 # https://crontab.guru/#45_23_*_*_0
+jobs:
+  job:
+    name: ${{ github.workflow }}
+    runs-on: ubuntu-latest
+    steps:
+      - id: checkout
+        name: checkout
+        uses: actions/checkout@v2
+      - id: build
+        name: build
+        run: npm run build
+      - name: s0/git-publish-subdir-action
+        uses: s0/git-publish-subdir-action@v2.6.0
+        env:
+          REPO: self
+          BRANCH: dist
+          FOLDER: dist/build
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MESSAGE: "Build: ({sha}) {msg}"
+          SKIP_EMPTY_COMMITS: true
