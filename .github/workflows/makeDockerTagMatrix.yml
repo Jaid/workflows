@@ -46,6 +46,9 @@ jobs:
       - id: installWorkflowsScripts
         name: installWorkflowsScripts
         run: npm install --no-save --no-package-lock git://github.com/jaid/workflows.git#dist
+      - id: debugFiles
+        name: debugFiles
+        run: ls -lah node_modules && ls -lah node_modules/@jaid && ls -lah node_modules/@jaid/workflows-scripts && ls -lah node_modules/@jaid/workflows-scripts/src && ls -lah node_modules/@jaid/workflows-scripts/src/makeDockerTagMatrix
       - id: makeMatrix
         name: makeMatrix
         run: node node_modules/@jaid/workflows-scripts/src/makeDockerTagMatrix/makeMatrix.js
