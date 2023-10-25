@@ -113,41 +113,41 @@ jobs:
         run: npm install --no-save --no-package-lock git://github.com/jaid/workflows.git#dist
       - id: getInputs
         name: getInputs
-        run: node --import tsx .github/workflows/uploadDocker/getInputs.ts
+        run: node node_modules/@jaid/workflows-scripts/src/uploadDocker/getInputs.js
         env:
           inputs: ${{ toJSON(inputs) }}
       - name: getDockerHubTokenLength
         id: getDockerHubTokenLength
-        run: node --import tsx .github/workflows/uploadDocker/getDockerHubTokenLength.ts
+        run: node node_modules/@jaid/workflows-scripts/src/uploadDocker/getDockerHubTokenLength.js
         env:
           secrets: ${{ toJSON(secrets) }}
       - name: getGithubPackagesRef
         id: getGithubPackagesRef
-        run: node --import tsx .github/workflows/uploadDocker/getGithubPackagesRef.ts
+        run: node node_modules/@jaid/workflows-scripts/src/uploadDocker/getGithubPackagesRef.js
         env:
           inputs: ${{ steps.getInputs.outputs.value }}
       - name: getDockerHubRef
         id: getDockerHubRef
         if: ${{ steps.getDockerHubTokenLength.outputs.value > 0 }}
-        run: node --import tsx .github/workflows/uploadDocker/getDockerHubRef.ts
+        run: node node_modules/@jaid/workflows-scripts/src/uploadDocker/getDockerHubRef.js
         env:
           inputs: ${{ steps.getInputs.outputs.value }}
           dockerHubTokenLength: ${{ steps.getDockerHubTokenLength.outputs.value }}
       - name: getRefs
         id: getRefs
-        run: node --import tsx .github/workflows/uploadDocker/getRefs.ts
+        run: node node_modules/@jaid/workflows-scripts/src/uploadDocker/getRefs.js
         env:
           inputs: ${{ steps.getInputs.outputs.value }}
           githubRef: ${{ steps.getGithubPackagesRef.outputs.value }}
           dockerHubRef: ${{ steps.getDockerHubRef.outputs.value }}
       - name: prepareVersionTag
         id: prepareVersionTag
-        run: node --import tsx .github/workflows/uploadDocker/prepareVersionTag.ts
+        run: node node_modules/@jaid/workflows-scripts/src/uploadDocker/prepareVersionTag.js
         env:
           inputs: ${{ steps.getInputs.outputs.value }}
       - name: getTags
         id: getTags
-        run: node --import tsx .github/workflows/uploadDocker/getTags.ts
+        run: node node_modules/@jaid/workflows-scripts/src/uploadDocker/getTags.js
         env:
           inputs: ${{ steps.getInputs.outputs.value }}
           versionTag: ${{ steps.prepareVersionTag.outputs.value }}

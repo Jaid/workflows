@@ -103,7 +103,7 @@ jobs:
           jq --indent 2 --color-output . <<< "$object"
       - id: actionsGithubContext
         name: '@actions/github context'
-        run: node --import tsx .github/workflows/debug/actionsGithubContext.ts
+        run: node node_modules/@jaid/workflows-scripts/src/debug/actionsGithubContext.js
       - name: env
         shell: bash
         run: |

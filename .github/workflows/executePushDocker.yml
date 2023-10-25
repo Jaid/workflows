@@ -53,7 +53,7 @@ jobs:
         run: npm install --no-save --no-package-lock git://github.com/jaid/workflows.git#dist
       - id: getInputs
         name: getInputs
-        run: node --import tsx .github/workflows/executePushDocker/getInputs.ts
+        run: node node_modules/@jaid/workflows-scripts/src/executePushDocker/getInputs.js
         env:
           inputs: ${{ toJson(inputs) }}
   build:

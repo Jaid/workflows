@@ -88,7 +88,7 @@ jobs:
           RELEASE_BRANCHES: ${{ inputs.releaseBranch }}
       - name: extractSemvers
         id: extractSemvers
-        run: node --import tsx .github/workflows/bump/extractSemvers.ts
+        run: node node_modules/@jaid/workflows-scripts/src/bump/extractSemvers.js
         env:
           steps: ${{ toJson(steps) }}
       - name: getReleaseTexts
@@ -119,7 +119,7 @@ jobs:
           makeLatest: ${{ inputs.makeLatest }}
       - name: prepareDispatch
         id: prepareDispatch
-        run: node --import tsx .github/workflows/bump/prepareDispatch.ts
+        run: node node_modules/@jaid/workflows-scripts/src/bump/prepareDispatch.js
         env:
           steps: ${{ toJson(steps) }}
       - name: triggerDispatch

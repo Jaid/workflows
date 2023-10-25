@@ -60,7 +60,7 @@ jobs:
         name: installWorkflowsScripts
         run: npm install --no-save --no-package-lock git://github.com/jaid/workflows.git#dist
       - id: getInputs
-        run: node --import tsx .github/workflows/testDocker/getInputs.ts
+        run: node node_modules/@jaid/workflows-scripts/src/testDocker/getInputs.js
         env:
           inputs: ${{ toJSON(inputs) }}
           github: ${{ toJSON(github) }}
@@ -83,6 +83,6 @@ jobs:
           platforms: ${{ steps.getInputs.outputs.arch }}
       - id: runImage
         name: runImage
-        run: node --import tsx .github/workflows/testDocker/runImage.ts
+        run: node node_modules/@jaid/workflows-scripts/src/testDocker/runImage.js
         env:
           inputs: ${{ steps.getInputs.outputs.value }}

@@ -48,7 +48,7 @@ jobs:
         run: npm install --no-save --no-package-lock git://github.com/jaid/workflows.git#dist
       - id: makeMatrix
         name: makeMatrix
-        run: node --import tsx .github/workflows/makeDockerTagMatrix/makeMatrix.ts
+        run: node node_modules/@jaid/workflows-scripts/src/makeDockerTagMatrix/makeMatrix.js
         env:
           inputs: ${{ toJSON(inputs) }}
           arch: ${{ runner.arch }}
