@@ -5,7 +5,7 @@ const extractSemver = (tag) => {
 };
 const newSemver = extractSemver(steps.createTag.outputs.new_tag);
 console.dir({
+    newSemver,
     newTag: steps.createTag.outputs.new_tag,
-    newSemver
 });
-core.setOutput('newSemver', newSemver?.version);
+core.setOutput(`newSemver`, newSemver?.version);
