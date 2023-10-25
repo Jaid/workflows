@@ -6,6 +6,8 @@ const setOutput = (value, name = `value`) => {
   core.info(`Output ${name}: ${value}`)
 }
 if (process.env.dockerHubTokenLength > 0) {
-  const dockerHubRef = `${inputs.dockerHubRegistry}/${inputs.imageSlug}`
+  const [slugUser, slugRepo] = inputs.imageSlug.split(`/`)
+  const user = inputs.dockerHubUser || slugUser
+  const dockerHubRef = `${inputs.dockerHubRegistry}/${user}/${slugRepo}`
   setOutput(dockerHubRef)
 }
