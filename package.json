@@ -10,17 +10,18 @@
     "lodash-es": "^4.17.21",
     "prevent-start": "^1.0.5",
     "read-file-json": "^1.1.0",
+    "shell-quote": "^1.8.1",
     "sort-keys": "^5.0.0",
     "super-regex": "^0.2.0",
     "vm2": "^3.9.19",
     "yaml": "^2.3.3"
   },
   "devDependencies": {
-    "tsx": "^3.14.0",
-    "type-fest": "^4.6.0",
-    "tsconfig-jaid-node": "^6.1.1",
     "eslint-config-jaid": "^8.17.0",
-    "globby": "^13.2.2"
+    "globby": "^13.2.2",
+    "tsconfig-jaid-node": "^6.1.1",
+    "tsx": "^3.14.0",
+    "type-fest": "^4.6.0"
   },
   "scripts": {
     "build": "node --import tsx etc/x/build.ts"
