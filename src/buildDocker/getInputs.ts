@@ -1,4 +1,4 @@
-import path from 'node:path'
+import * as path from 'forward-slash-path'
 
 import * as core from '@actions/core'
 
