@@ -21,7 +21,7 @@ jobs:
           printf 'workspaceFolder=%s\n' "$(realpath "$GITHUB_WORKSPACE")" >> $GITHUB_OUTPUT
           printf 'tempFolder=%s\n' "$(realpath "$RUNNER_TEMP")" >> $GITHUB_OUTPUT
       - name: checkout
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@v5.0.0
       - name: installNodePackages
         id: installNodePackages
         uses: jaid/action-npm-install@main
@@ -29,7 +29,7 @@ jobs:
         name: installWorkflowsScripts
         run: npm install --no-save --no-package-lock git://github.com/jaid/workflows.git#dist
       - name: installPackages
-        uses: awalsh128/cache-apt-pkgs-action@v1.3.0
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.0
         with:
           packages: jq
       - name: users

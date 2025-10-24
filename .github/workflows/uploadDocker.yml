@@ -100,7 +100,7 @@ jobs:
       packages: write
     steps:
       - name: checkout
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@v5.0.0
       - name: setupNode
         uses: actions/setup-node@v4.0.0
         with:
@@ -153,19 +153,19 @@ jobs:
           versionTag: ${{ steps.prepareVersionTag.outputs.value }}
       - name: login (${{ steps.getInputs.outputs.dockerHubUser }} @ ${{ steps.getInputs.outputs.dockerHubRegistry }})
         if: ${{ steps.getDockerHubTokenLength.outputs.value > 0 }}
-        uses: docker/login-action@v3.0.0
+        uses: docker/login-action@v3.6.0
         with:
           username: ${{ steps.getInputs.outputs.dockerHubUser }}
           password: ${{ secrets.dockerHubToken }}
       - name: login (${{ github.repository_owner }} @ ${{ steps.getInputs.outputs.githubRegistry }})
-        uses: docker/login-action@v3.0.0
+        uses: docker/login-action@v3.6.0
         with:
           registry: ${{ steps.getInputs.outputs.githubRegistry }}
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: extractDockerMetadata
         id: extractDockerMetadata
-        uses: docker/metadata-action@v5.0.0
+        uses: docker/metadata-action@v5.8.0
         with:
           images: ${{ steps.getRefs.outputs.value }}
           labels: |
@@ -179,16 +179,16 @@ jobs:
             suffix=${{ steps.getInputs.outputs.flavorSuffix && format('{0}{1}', steps.getInputs.outputs.flavorConnectionString, steps.getInputs.outputs.flavorSuffix) || '' }}
       - name: setupQemu
         if: ${{ steps.getInputs.outputs.arch != 'linux/amd64' }}
-        uses: docker/setup-qemu-action@v3.0.0
+        uses: docker/setup-qemu-action@v3.6.0
         with:
           platforms: ${{ steps.getInputs.outputs.arch }}
       - name: setupBuildx
-        uses: docker/setup-buildx-action@v3.0.0
+        uses: docker/setup-buildx-action@v3.11.1
         with:
           platforms: ${{ steps.getInputs.outputs.arch }}
       - name: dockerPush
         id: dockerPush
-        uses: docker/build-push-action@v5.0.0
+        uses: docker/build-push-action@v6.18.0
         with:
           push: true
           platforms: ${{ steps.getInputs.outputs.arch }}

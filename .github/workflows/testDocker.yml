@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@v5.0.0
       - name: setupNode
         uses: actions/setup-node@v4.0.0
         with:
@@ -65,7 +65,7 @@ jobs:
           inputs: ${{ toJSON(inputs) }}
           github: ${{ toJSON(github) }}
       - name: loadArtifact
-        uses: actions/download-artifact@v3.0.2
+        uses: actions/download-artifact@v5.0.0
         with:
           name: ${{ steps.getInputs.outputs.imageArtifact }}
           path: ${{ steps.getInputs.outputs.imageFolder }}
@@ -78,7 +78,7 @@ jobs:
             docker load --input "$imageFolder/$imageFile"
       - name: setupQemu
         if: ${{ steps.getInputs.outputs.arch != 'linux/amd64' }}
-        uses: docker/setup-qemu-action@v3.0.0
+        uses: docker/setup-qemu-action@v3.6.0
         with:
           platforms: ${{ steps.getInputs.outputs.arch }}
       - id: runImage

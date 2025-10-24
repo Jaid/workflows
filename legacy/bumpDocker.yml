@@ -80,7 +80,7 @@ jobs:
         fetch-depth: 0
     - name: createTag
       id: createTag
-      uses: anothrNick/github-tag-action@1.65.0
+      uses: anothrNick/github-tag-action@1.75.0
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         WITH_V: true
@@ -130,7 +130,7 @@ jobs:
         arch=$(jq --raw-output '.images[0].architecture' <<<"$json")
         printf 'size=%s\ndigest=%s\narch=%s' "$size" "$digest" "$arch" > $GITHUB_OUTPUT
     - name: updateRelease
-      uses: ncipollo/release-action@v1.13.0
+      uses: ncipollo/release-action@v1.20.0
       with:
         allowUpdates: true
         tag: ${{ needs.prepare.outputs.repoTag }}
