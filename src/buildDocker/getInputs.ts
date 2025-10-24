@@ -1,10 +1,9 @@
-import * as path from 'forward-slash-path'
-
 import * as core from '@actions/core'
+import * as path from 'forward-slash-path'
 
 const inputs = JSON.parse(process.env.inputs!)
 const github = JSON.parse(process.env.github!)
-const setOutput = (value, name = `value`) => {
+const setOutput = (value, name = 'value') => {
   core.setOutput(name, value)
   core.info(`Output ${name}: ${value}`)
 }
@@ -12,10 +11,10 @@ const outputs = {
   ...inputs,
 }
 if (!outputs.id) {
-  outputs.id = `default`
+  outputs.id = 'default'
 }
 if (!outputs.cacheKey) {
-  outputs.cacheKey = `${github.repository}|${github.workflow}|${github.ref_name}|${outputs.id}`.replaceAll(/[ ,\/\\_|]+/g, `_`)
+  outputs.cacheKey = `${github.repository}|${github.workflow}|${github.ref_name}|${outputs.id}`.replaceAll(/[ ,/\\_|]+/g, '_')
 }
 if (!outputs.cacheFrom) {
   outputs.cacheFrom = `type=gha,scope=${outputs.cacheKey}`
@@ -23,7 +22,11 @@ if (!outputs.cacheFrom) {
 if (!outputs.cacheTo) {
   outputs.cacheTo = `${outputs.cacheFrom},mode=max`
 }
-outputs.cacheHint = outputs.cacheTo.replace(`mode=max`, ``).replace(/^,+/, ``).replace(/,+$/, ``).replaceAll(/,+/g, `,`)
+outputs.cacheHint = outputs.cacheTo
+  .replace('mode=max', '')
+  .replace(/^,+/, '')
+  .replace(/,+$/, '')
+  .replaceAll(/,+/g, ',')
 if (!outputs.imageArtifact) {
   outputs.imageArtifact = `${github.run_id}_${outputs.id}`
 }

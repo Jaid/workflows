@@ -4,20 +4,20 @@ import * as shellQuote from 'shell-quote'
 import {VM} from 'vm2'
 
 const inputs = JSON.parse(process.env.inputs!)
-const args = [`run`, `--rm`]
+const args = ['run', '--rm']
 if (inputs.dockerRunArgs) {
   const dockerRunArgsArray = shellQuote.parse(inputs.dockerRunArgs)
   args.push(...dockerRunArgsArray)
 }
-if (inputs.arch !== `linux/amd64`) {
-  args.push(`--platform`, inputs.arch)
+if (inputs.arch !== 'linux/amd64') {
+  args.push('--platform', inputs.arch)
 }
 args.push(inputs.imageIdentifier)
 if (inputs.appArgs) {
   const appArgsArray = shellQuote.parse(inputs.appArgs)
   args.push(...appArgsArray)
 }
-const executionResult = await execa(`docker`, args, {
+const executionResult = await execa('docker', args, {
   all: true,
   verbose: true,
 })

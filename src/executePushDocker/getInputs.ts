@@ -15,13 +15,13 @@ if (core.isDebug()) {
     passedInputs,
   })
 }
-const setOutput = (value, name = `value`) => {
+const setOutput = (value, name = 'value') => {
   core.setOutput(name, value)
   core.info(`Output ${name}: ${value}`)
 }
-console.dir(omit(inputs, [`passedInputs`, `matrixEntry`]))
+console.dir(omit(inputs, ['passedInputs', 'matrixEntry']))
 const outputs = {
-  ...omit(inputs, [`passedInputs`, `matrixEntry`]),
+  ...omit(inputs, ['passedInputs', 'matrixEntry']),
   ...passedInputs,
 }
 for (const [key, value] of Object.entries(matrixEntry)) {
@@ -29,7 +29,7 @@ for (const [key, value] of Object.entries(matrixEntry)) {
   outputs[exclusiveKey] = value
 }
 if (!outputs.imageName) {
-  outputs.imageName = preventStart.default(context.payload.repository.name.toLowerCase(), `docker-`)
+  outputs.imageName = preventStart.default(context.payload.repository.name.toLowerCase(), 'docker-')
 }
 if (!outputs.imageUser) {
   outputs.imageUser = context.payload.repository.owner.login.toLowerCase()
@@ -44,10 +44,10 @@ if (!outputs.imageFolder) {
   outputs.imageFolder = `/tmp/dockerBuild/${context.runId}_${outputs.matrixId}`
 }
 if (!outputs.nameSuffix) {
-  if (outputs.matrixId && outputs.matrixId !== `default`) {
+  if (outputs.matrixId && outputs.matrixId !== 'default') {
     outputs.nameSuffix = ` (${outputs.matrixId})`
   } else {
-    outputs.nameSuffix = ``
+    outputs.nameSuffix = ''
   }
 }
 for (const [key, value] of Object.entries(sortKeys(outputs))) {

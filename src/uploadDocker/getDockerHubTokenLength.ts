@@ -4,8 +4,8 @@ type Secrets = {
   dockerHubToken?: string
 }
 
-const secrets = <Secrets> JSON.parse(process.env.secrets!)
-const setOutput = (value: string, name = `value`) => {
+const secrets = JSON.parse(process.env.secrets!) as Secrets
+const setOutput = (value: string, name = 'value') => {
   core.setOutput(name, value)
   core.info(`Output ${name}: ${value}`)
 }

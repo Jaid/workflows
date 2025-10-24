@@ -9,4 +9,4 @@ console.dir({
   newSemver,
   newTag: steps.createTag.outputs.new_tag,
 })
-core.setOutput(`newSemver`, newSemver?.version)
+core.setOutput('newSemver', newSemver?.version)

@@ -1,7 +1,7 @@
 import * as core from '@actions/core'
 
 const steps = JSON.parse(process.env.steps!)
-const setOutput = (value, name = `value`) => {
+const setOutput = (value, name = 'value') => {
   core.setOutput(name, value)
   core.info(`Output ${name}: ${value}`)
 }
