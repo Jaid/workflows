@@ -35,11 +35,11 @@ jobs:
       nativeArch: ${{ steps.makeMatrix.outputs.nativeArch }}
     steps:
       - name: setupNode
-        uses: actions/setup-node@v4.0.0
+        uses: actions/setup-node@v6.3.0
         with:
           node-version: latest
       - name: checkout
-        uses: actions/checkout@v5.0.0
+        uses: actions/checkout@v6.0.2
       - name: installNodePackages
         id: installNodePackages
         uses: jaid/action-npm-install@main
