@@ -5,12 +5,10 @@ jobs:
   job:
     name: debug (${{ github.event_name }})
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     continue-on-error: true
     steps:
-      - name: setupNode
-        uses: actions/setup-node@v6.3.0
-        with:
-          node-version: current
       - name: prepare
         id: prepare
         shell: bash
@@ -22,12 +20,8 @@ jobs:
           printf 'tempFolder=%s\n' "$(realpath "$RUNNER_TEMP")" >> $GITHUB_OUTPUT
       - name: checkout
         uses: actions/checkout@v6.0.2
-      - name: installNodePackages
-        id: installNodePackages
-        uses: jaid/action-npm-install@main
-      - id: installWorkflowsScripts
-        name: installWorkflowsScripts
-        run: npm install --no-save --no-package-lock git://github.com/jaid/workflows.git#dist
+      - name: setupBun
+        uses: oven-sh/setup-bun@v2.2.0
       - name: installPackages
         uses: awalsh128/cache-apt-pkgs-action@v1.6.0
         with:
@@ -103,7 +97,37 @@ jobs:
           jq --indent 2 --color-output . <<< "$object"
       - id: actionsGithubContext
         name: '@actions/github context'
-        run: node node_modules/@jaid/workflows-scripts/src/debug/actionsGithubContext.js
+        run: |-
+          bun <<'EOF'
+          const payloadPath = process.env.GITHUB_EVENT_PATH
+          if (!payloadPath) {
+            throw new Error('Missing required environment variable “GITHUB_EVENT_PATH”.')
+          }
+          const payload = JSON.parse(await Bun.file(payloadPath).text()) as Record<string, unknown>
+          const [owner = '', repo = ''] = (process.env.GITHUB_REPOSITORY ?? '').split('/')
+          const context = {
+            payload,
+            eventName: process.env.GITHUB_EVENT_NAME,
+            sha: process.env.GITHUB_SHA,
+            ref: process.env.GITHUB_REF,
+            workflow: process.env.GITHUB_WORKFLOW,
+            action: process.env.GITHUB_ACTION,
+            actor: process.env.GITHUB_ACTOR,
+            job: process.env.GITHUB_JOB,
+            runAttempt: process.env.GITHUB_RUN_ATTEMPT ? Number(process.env.GITHUB_RUN_ATTEMPT) : undefined,
+            runNumber: process.env.GITHUB_RUN_NUMBER ? Number(process.env.GITHUB_RUN_NUMBER) : undefined,
+            runId: process.env.GITHUB_RUN_ID ? Number(process.env.GITHUB_RUN_ID) : undefined,
+            apiUrl: process.env.GITHUB_API_URL,
+            serverUrl: process.env.GITHUB_SERVER_URL,
+            graphqlUrl: process.env.GITHUB_GRAPHQL_URL,
+            repo: {
+              owner,
+              repo,
+            },
+          }
+          console.log('context as json')
+          console.log(JSON.stringify(context, null, 2))
+          EOF
       - name: env
         shell: bash
         run: |

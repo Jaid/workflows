@@ -68,16 +68,8 @@ jobs:
         uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
-      - name: setupNode
-        uses: actions/setup-node@v6.3.0
-        with:
-          node-version: current
-      - name: installNodePackages
-        id: installNodePackages
-        uses: jaid/action-npm-install@main
-      - id: installWorkflowsScripts
-        name: installWorkflowsScripts
-        run: npm install --no-save --no-package-lock git://github.com/jaid/workflows.git#dist
+      - name: setupBun
+        uses: oven-sh/setup-bun@v2.2.0
       - name: createTag
         id: createTag
         uses: anothrNick/github-tag-action@1.75.0
@@ -88,7 +80,36 @@ jobs:
           RELEASE_BRANCHES: ${{ inputs.releaseBranch }}
       - name: extractSemvers
         id: extractSemvers
-        run: node node_modules/@jaid/workflows-scripts/src/bump/extractSemvers.js
+        run: |-
+          bun <<'EOF'
+          import {appendFile} from 'node:fs/promises'
+
+          const parseRequiredJsonEnv = <Output>(name: string) => {
+            const value = process.env[name]
+            if (value == null) {
+              throw new Error(`Missing required environment variable “${name}”.`)
+            }
+            return JSON.parse(value) as Output
+          }
+
+          const setOutput = async (name: string, value: unknown) => {
+            const rendered = String(value)
+            const delimiter = `output_${Math.random().toString(36).slice(2)}`
+            await appendFile(process.env.GITHUB_OUTPUT!, `${name}<<${delimiter}\n${rendered}\n${delimiter}\n`)
+            console.log(`Output ${name}: ${rendered}`)
+          }
+
+          const steps = parseRequiredJsonEnv<Record<string, {outputs: Record<string, string>}>>('steps')
+          const extractSemver = (tag: string) => {
+            return /(?<versionPrefix>v?)(?<version>\d+\.\d+\.\d+)/.exec(tag)?.groups
+          }
+          const newSemver = extractSemver(steps.createTag.outputs.new_tag)
+          console.dir({
+            newSemver,
+            newTag: steps.createTag.outputs.new_tag,
+          })
+          await setOutput('newSemver', newSemver?.version ?? '')
+          EOF
         env:
           steps: ${{ toJson(steps) }}
       - name: getReleaseTexts
@@ -119,7 +140,37 @@ jobs:
           makeLatest: ${{ inputs.makeLatest }}
       - name: prepareDispatch
         id: prepareDispatch
-        run: node node_modules/@jaid/workflows-scripts/src/bump/prepareDispatch.js
+        run: |-
+          bun <<'EOF'
+          import {appendFile} from 'node:fs/promises'
+
+          const parseRequiredJsonEnv = <Output>(name: string) => {
+            const value = process.env[name]
+            if (value == null) {
+              throw new Error(`Missing required environment variable “${name}”.`)
+            }
+            return JSON.parse(value) as Output
+          }
+
+          const setOutput = async (name: string, value: unknown) => {
+            const rendered = String(value)
+            const delimiter = `output_${Math.random().toString(36).slice(2)}`
+            await appendFile(process.env.GITHUB_OUTPUT!, `${name}<<${delimiter}\n${rendered}\n${delimiter}\n`)
+            console.log(`Output ${name}: ${rendered}`)
+          }
+
+          const steps = parseRequiredJsonEnv<Record<string, {outputs: Record<string, string>}>>('steps')
+          const output = {
+            newSemver: steps.extractSemvers.outputs.newSemver,
+            newTag: steps.createTag.outputs.new_tag,
+            oldTag: steps.createTag.outputs.old_tag,
+            releaseBody: steps.getReleaseTexts.outputs.body,
+            releaseId: steps.updateRelease.outputs.id,
+            releaseTitle: steps.getReleaseTexts.outputs.title,
+            releaseUrl: steps.updateRelease.outputs.html_url,
+          }
+          await setOutput('value', JSON.stringify(output))
+          EOF
         env:
           steps: ${{ toJson(steps) }}
       - name: triggerDispatch
