@@ -48,7 +48,7 @@ jobs:
       - id: getInputs
         name: getInputs
         run: |-
-          bun <<'EOF'
+          bun run - <<'EOF'
           import {appendFile} from 'node:fs/promises'
 
           const parseRequiredJsonEnv = <Output>(name: string) => {

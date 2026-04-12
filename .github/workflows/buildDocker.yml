@@ -106,7 +106,7 @@ jobs:
           inputs: ${{ toJSON(inputs) }}
           github: ${{ toJSON(github) }}
         run: |-
-          bun <<'EOF'
+          bun run - <<'EOF'
           import {appendFile} from 'node:fs/promises'
           import path from 'node:path'
 

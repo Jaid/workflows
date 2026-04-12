@@ -98,7 +98,7 @@ jobs:
       - id: actionsGithubContext
         name: '@actions/github context'
         run: |-
-          bun <<'EOF'
+          bun run - <<'EOF'
           const payloadPath = process.env.GITHUB_EVENT_PATH
           if (!payloadPath) {
             throw new Error('Missing required environment variable “GITHUB_EVENT_PATH”.')

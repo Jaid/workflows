@@ -107,7 +107,7 @@ jobs:
       - id: getInputs
         name: getInputs
         run: |-
-          bun <<'EOF'
+          bun run - <<'EOF'
           import {appendFile} from 'node:fs/promises'
 
           const parseRequiredJsonEnv = <Output>(name: string) => {
@@ -168,7 +168,7 @@ jobs:
       - name: getDockerHubTokenLength
         id: getDockerHubTokenLength
         run: |-
-          bun <<'EOF'
+          bun run - <<'EOF'
           import {appendFile} from 'node:fs/promises'
 
           const parseRequiredJsonEnv = <Output>(name: string) => {
@@ -194,7 +194,7 @@ jobs:
       - name: getGithubPackagesRef
         id: getGithubPackagesRef
         run: |-
-          bun <<'EOF'
+          bun run - <<'EOF'
           import {appendFile} from 'node:fs/promises'
 
           const parseRequiredJsonEnv = <Output>(name: string) => {
@@ -226,7 +226,7 @@ jobs:
         id: getDockerHubRef
         if: ${{ steps.getDockerHubTokenLength.outputs.value > 0 }}
         run: |-
-          bun <<'EOF'
+          bun run - <<'EOF'
           import {appendFile} from 'node:fs/promises'
 
           const parseRequiredJsonEnv = <Output>(name: string) => {
@@ -258,7 +258,7 @@ jobs:
       - name: getRefs
         id: getRefs
         run: |-
-          bun <<'EOF'
+          bun run - <<'EOF'
           import {appendFile} from 'node:fs/promises'
 
           const parseRequiredJsonEnv = <Output>(name: string) => {
@@ -290,7 +290,7 @@ jobs:
       - name: prepareVersionTag
         id: prepareVersionTag
         run: |-
-          bun <<'EOF'
+          bun run - <<'EOF'
           import {appendFile} from 'node:fs/promises'
 
           const parseRequiredJsonEnv = <Output>(name: string) => {
@@ -329,7 +329,7 @@ jobs:
       - name: getTags
         id: getTags
         run: |-
-          bun <<'EOF'
+          bun run - <<'EOF'
           import {appendFile} from 'node:fs/promises'
 
           const parseRequiredJsonEnv = <Output>(name: string) => {

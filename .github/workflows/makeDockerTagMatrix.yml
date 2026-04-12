@@ -41,7 +41,7 @@ jobs:
       - id: makeMatrix
         name: makeMatrix
         run: |-
-          bun <<'EOF'
+          bun run - <<'EOF'
           import {appendFile} from 'node:fs/promises'
           import {runInNewContext} from 'node:vm'
 

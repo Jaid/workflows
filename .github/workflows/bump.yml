@@ -81,7 +81,7 @@ jobs:
       - name: extractSemvers
         id: extractSemvers
         run: |-
-          bun <<'EOF'
+          bun run - <<'EOF'
           import {appendFile} from 'node:fs/promises'
 
           const parseRequiredJsonEnv = <Output>(name: string) => {
@@ -141,7 +141,7 @@ jobs:
       - name: prepareDispatch
         id: prepareDispatch
         run: |-
-          bun <<'EOF'
+          bun run - <<'EOF'
           import {appendFile} from 'node:fs/promises'
 
           const parseRequiredJsonEnv = <Output>(name: string) => {
