@@ -2,8 +2,8 @@
   "publisher": "jaid",
   "name": "github-actions-bun-typescript",
   "displayName": "GitHub Actions Bun TypeScript",
-  "description": "Workspace-local syntax highlighting for Bun TypeScript heredocs inside GitHub Actions run blocks.",
-  "version": "0.1.0",
+  "description": "Workspace-local syntax highlighting for inline Bun TypeScript stdin scripts inside GitHub Actions run blocks.",
+  "version": "0.1.1",
   "engines": {
     "vscode": "^1.85.0"
   },
