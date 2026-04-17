@@ -1,12 +1,16 @@
-# GitHub Actions Bun TypeScript
+# GitHub Actions Run TypeScript
 
-This workspace-local VS Code extension makes the inlined TypeScript blobs inside GitHub Actions workflows easier to read.
+This workspace-local VS Code extension makes the inlined TypeScript passed to `jaidlab/action-run-typescript` easier to read.
 
-It currently does two things:
+It injects TypeScript syntax into YAML `with.code: |` block scalars when the same step references `jaidlab/action-run-typescript@…`, for example:
 
-1. injects shell syntax into YAML `run: |` block scalars
-2. injects TypeScript syntax into Bun stdin heredocs inside those shell blocks
+```yml
+- uses: JaidLab/action-run-typescript@main
+  with:
+    code: |-
+      console.log('hi')
+```
 
-The Bun detection is intentionally lightweight and heuristic. It is tuned for this repository’s workflow style and recognizes both legacy `bun <<'EOF'` blocks and the current `bun run - <<'EOF'` form.
+The action detection is intentionally lightweight and heuristic. It is case-insensitive for the action reference, ref-agnostic and tuned for this repository’s workflow style. It currently expects the matching `uses:` line to appear before the `with:` block.
 
-The implementation does not try to be a full GitHub Actions or shell parser.
+The implementation does not try to be a full GitHub Actions or YAML parser.

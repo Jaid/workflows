@@ -1,0 +1,92 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "GitHub Actions action-run-typescript injection",
+  "scopeName": "source.yaml.github-actions.action-run-typescript.injection",
+  "injectionSelector": "L:source.yaml, L:source.yaml.github-actions, L:source.github-actions, L:source.github-actions-workflow - meta.embedded.block.typescript",
+  "patterns": [
+    {
+      "include": "#action-run-typescript-step-sequence-item"
+    },
+    {
+      "include": "#action-run-typescript-step-property"
+    }
+  ],
+  "repository": {
+    "action-run-typescript-step-sequence-item": {
+      "name": "meta.action-run-typescript.step.yaml",
+      "begin": "^(\\s*)(-\\s+)(uses)(\\s*:\\s*)(?:\"(?i:jaidlab/action-run-typescript)@[^\"\\r\\n]+\"|'(?i:jaidlab/action-run-typescript)@[^'\\r\\n]+'|(?i:jaidlab/action-run-typescript)@[^\\s#]+)(\\s*(?:#.*)?)$",
+      "beginCaptures": {
+        "3": {
+          "name": "entity.name.tag.yaml"
+        },
+        "4": {
+          "name": "punctuation.separator.key-value.mapping.yaml"
+        }
+      },
+      "end": "^(?!(?:\\1\\s|\\s*$))",
+      "patterns": [
+        {
+          "include": "#with-block"
+        }
+      ]
+    },
+    "action-run-typescript-step-property": {
+      "name": "meta.action-run-typescript.step.yaml",
+      "begin": "^(\\s+)(uses)(\\s*:\\s*)(?:\"(?i:jaidlab/action-run-typescript)@[^\"\\r\\n]+\"|'(?i:jaidlab/action-run-typescript)@[^'\\r\\n]+'|(?i:jaidlab/action-run-typescript)@[^\\s#]+)(\\s*(?:#.*)?)$",
+      "beginCaptures": {
+        "2": {
+          "name": "entity.name.tag.yaml"
+        },
+        "3": {
+          "name": "punctuation.separator.key-value.mapping.yaml"
+        }
+      },
+      "end": "^(?!(?:\\1|\\s*$))",
+      "patterns": [
+        {
+          "include": "#with-block"
+        }
+      ]
+    },
+    "with-block": {
+      "name": "meta.action-run-typescript.with.yaml",
+      "begin": "^(\\s+)(with)(\\s*:\\s*)(?:#.*)?$",
+      "beginCaptures": {
+        "2": {
+          "name": "entity.name.tag.yaml"
+        },
+        "3": {
+          "name": "punctuation.separator.key-value.mapping.yaml"
+        }
+      },
+      "end": "^(?!(?:\\1\\s+|\\s*$))",
+      "patterns": [
+        {
+          "include": "#code-block"
+        }
+      ]
+    },
+    "code-block": {
+      "name": "meta.action-run-typescript.code.yaml",
+      "contentName": "meta.embedded.block.typescript",
+      "begin": "^(\\s+)(code)(\\s*:\\s*)([>|](?:[-+]?[1-9]|[1-9]?[-+])?\\s*)(?:#.*)?$",
+      "beginCaptures": {
+        "2": {
+          "name": "entity.name.tag.yaml"
+        },
+        "3": {
+          "name": "punctuation.separator.key-value.mapping.yaml"
+        },
+        "4": {
+          "name": "string.unquoted.block.yaml"
+        }
+      },
+      "end": "^(?!(?:\\1\\s+|\\s*$))",
+      "patterns": [
+        {
+          "include": "source.ts"
+        }
+      ]
+    }
+  }
+}

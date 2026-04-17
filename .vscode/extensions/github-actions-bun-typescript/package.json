@@ -1,9 +1,9 @@
 {
   "publisher": "jaid",
   "name": "github-actions-bun-typescript",
-  "displayName": "GitHub Actions Bun TypeScript",
-  "description": "Workspace-local syntax highlighting for inline Bun TypeScript stdin scripts inside GitHub Actions run blocks.",
-  "version": "0.1.1",
+  "displayName": "GitHub Actions Run TypeScript",
+  "description": "Workspace-local syntax highlighting for inline TypeScript passed to jaidlab/action-run-typescript in GitHub Actions workflows.",
+  "version": "0.2.0",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -14,16 +14,15 @@
     "github-actions",
     "workflow",
     "yaml",
-    "shell",
-    "bun",
     "typescript",
+    "action-run-typescript",
     "syntax-highlighting"
   ],
   "contributes": {
     "grammars": [
       {
-        "scopeName": "source.yaml.github-actions.run-shell.injection",
-        "path": "./syntaxes/github-actions-run-shell.injection.tmLanguage.json",
+        "scopeName": "source.yaml.github-actions.action-run-typescript.injection",
+        "path": "./syntaxes/github-actions-action-run-typescript.injection.tmLanguage.json",
         "injectTo": [
           "source.yaml",
           "source.yaml.github-actions",
@@ -31,11 +30,9 @@
           "source.github-actions-workflow"
         ],
         "embeddedLanguages": {
-          "meta.embedded.block.shellscript": "shellscript",
           "meta.embedded.block.typescript": "typescript"
         },
         "tokenTypes": {
-          "meta.embedded.block.shellscript": "other",
           "meta.embedded.block.typescript": "other"
         }
       }
