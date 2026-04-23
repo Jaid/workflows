@@ -3,7 +3,7 @@
   "name": "github-actions-bun-typescript",
   "displayName": "GitHub Actions Run TypeScript",
   "description": "Workspace-local syntax highlighting for inline TypeScript passed to jaidlab/action-run-typescript in GitHub Actions workflows.",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "engines": {
     "vscode": "^1.85.0"
   },

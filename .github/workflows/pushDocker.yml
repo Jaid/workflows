@@ -116,17 +116,17 @@ on:
         description: 'Create here with “Read, Write”: https://hub.docker.com/settings/security?generateToken=true'
     outputs:
       meta:
-        value: ${{ jobs.push.outputs.meta }}
+        value: ${{ jobs.invoke.outputs.meta }}
       digest:
-        value: ${{ jobs.push.outputs.digest }}
+        value: ${{ jobs.invoke.outputs.digest }}
       imageId:
-        value: ${{ jobs.push.outputs.imageId }}
+        value: ${{ jobs.invoke.outputs.imageId }}
       imageName:
-        value: ${{ jobs.push.outputs.imageName }}
+        value: ${{ jobs.invoke.outputs.imageName }}
       imageSlug:
-        value: ${{ jobs.push.outputs.imageSlug }}
+        value: ${{ jobs.invoke.outputs.imageSlug }}
       imageUser:
-        value: ${{ jobs.push.outputs.imageUser }}
+        value: ${{ jobs.invoke.outputs.imageUser }}
 jobs:
   makeMatrix:
     name: makeMatrix
