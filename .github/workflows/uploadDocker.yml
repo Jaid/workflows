@@ -5,7 +5,7 @@ on:
         type: string
         required: false
         default: linux/amd64
-        description: Image arch to build and push
+        description: image arch to build and push
       dockerHubUser:
         type: string
         required: false
@@ -44,15 +44,15 @@ on:
       additionalTags:
         type: string
         required: false
-        default: null
+        default: ''
       versionTag:
         type: string
         required: false
-        default: null
+        default: ''
       versionTagSemverPrefix:
         type: string
         required: false
-        default: null
+        default: ''
         description: If given, this will be the semver’s prefix
       flavorLatest:
         type: string
@@ -71,11 +71,11 @@ on:
       nameSuffix:
         type: string
         required: false
-        description: Suffix to append to the job name
+        description: suffix to append to the job name
       imageSlug:
         type: string
         required: false
-        description: Slug of the image
+        description: slug of the image
       id:
         type: string
         required: false
@@ -83,15 +83,23 @@ on:
       buildOutput:
         type: string
         required: true
-        description: Output of the build job in JSON
+        description: output of the build job in JSON
       title:
         type: string
         required: false
-        description: Title of the image
+        description: title of the image
+      readmePath:
+        type: string
+        required: false
+        default: ''
+        description: path of the readme to upload to Docker Hub, if set
     secrets:
       dockerHubToken:
         required: false
-        description: 'Create here with “Read, Write”: https://hub.docker.com/settings/security?generateToken=true'
+        description: |-
+          API token for Docker Hub
+
+          Create here with “Read, Write”: https://hub.docker.com/settings/security?generateToken=true
     outputs:
       meta:
         value: ${{ jobs.upload.outputs.meta }}
@@ -134,6 +142,19 @@ jobs:
             const outputs: Record<string, unknown> = {
               ...Object.fromEntries(Object.entries(inputs).filter(([key]) => key !== 'buildOutput')),
             }
+            const isNativeArch = (arch: string) => {
+              const currentArch = String(runner.arch || '').toLowerCase()
+              if (currentArch === 'x64') {
+                return arch === 'linux/amd64'
+              }
+              if (currentArch === 'arm64') {
+                return arch === 'linux/arm64' || arch === 'linux/arm64/v8'
+              }
+              if (currentArch === 'arm') {
+                return arch === 'linux/arm/v7'
+              }
+              return false
+            }
             for (const [key, value] of Object.entries(buildOutput)) {
               outputs[camelCase(`build ${key}`)] = value
             }
@@ -159,6 +180,7 @@ jobs:
                 outputs.title = `${outputs.imageName} (${outputs.id})`
               }
             }
+            outputs.isNativeArch = String(isNativeArch(String(outputs.arch)))
             for (const key of Object.keys(outputs).sort((first, second) => first.localeCompare(second))) {
               core.setOutput(key, outputs[key])
             }
@@ -198,7 +220,9 @@ jobs:
             }
             const [slugUser, slugRepo] = inputs.imageSlug.split('/')
             const user = inputs.dockerHubUser || slugUser
-            core.setOutput('value', `${inputs.dockerHubRegistry}/${user}/${slugRepo}`)
+            const repository = `${user}/${slugRepo}`
+            core.setOutput('repository', repository)
+            core.setOutput('value', `${inputs.dockerHubRegistry}/${repository}`)
       - name: getRefs
         id: getRefs
         uses: jaidlab/action-run-typescript@main
@@ -224,7 +248,7 @@ jobs:
               if (!tag) {
                 return ''
               }
-              if (inputs.versionTagSemverPrefix == null) {
+              if (!inputs.versionTagSemverPrefix) {
                 return tag
               }
               const semver = /(?<versionPrefix>v?)(?<version>\d+\.\d+\.\d+)/.exec(tag)?.groups
@@ -309,10 +333,8 @@ jobs:
             prefix=${{ steps.getInputs.outputs.flavorPrefix && format('{0}{1}', steps.getInputs.outputs.flavorPrefix, steps.getInputs.outputs.flavorConnectionString) || '' }}
             suffix=${{ steps.getInputs.outputs.flavorSuffix && format('{0}{1}', steps.getInputs.outputs.flavorConnectionString, steps.getInputs.outputs.flavorSuffix) || '' }}
       - name: setupQemu
-        if: ${{ steps.getInputs.outputs.arch != 'linux/amd64' }}
+        if: ${{ steps.getInputs.outputs.isNativeArch != 'true' }}
         uses: docker/setup-qemu-action@v4.0.0
-        with:
-          platforms: ${{ steps.getInputs.outputs.arch }}
       - name: setupBuildx
         uses: docker/setup-buildx-action@v4.0.0
         with:
@@ -328,3 +350,11 @@ jobs:
           cache-from: ${{ fromJson(steps.getInputs.outputs.buildInputs).cacheHint }}
           context: ${{ steps.getInputs.outputs.buildContext }}
           build-args: ${{ steps.getInputs.outputs.buildBuildArgs }}
+      - name: updateDockerHubDescription
+        if: ${{ steps.getDockerHubTokenLength.outputs.value > 0 && steps.getInputs.outputs.readmePath != '' && hashFiles(steps.getInputs.outputs.readmePath) != '' }}
+        uses: peter-evans/dockerhub-description@v5.0.0
+        with:
+          username: ${{ steps.getInputs.outputs.dockerHubUser }}
+          password: ${{ secrets.dockerHubToken }}
+          repository: ${{ steps.getDockerHubRef.outputs.repository }}
+          readme-filepath: ${{ steps.getInputs.outputs.readmePath }}

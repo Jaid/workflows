@@ -5,7 +5,7 @@ on:
       arch:
         type: string
         required: false
-        description: List of image archs to build, comma separated without spaces
+        description: list of image architectures to build, comma-separated without spaces
       buildContext:
         type: string
         required: false
@@ -48,15 +48,15 @@ on:
       additionalTags:
         type: string
         required: false
-        default: null
+        default: ''
       versionTag:
         type: string
         required: false
-        default: null
+        default: ''
       versionTagSemverPrefix:
         type: string
         required: false
-        default: null
+        default: ''
         description: If given, this will be the semver’s prefix
       flavorLatest:
         type: string
@@ -75,7 +75,8 @@ on:
       readmePath:
         type: string
         required: false
-        default: readme.md
+        default: ''
+        description: path of the readme to upload to Docker Hub, if set
       buildArgs:
         type: string
         required: false
@@ -95,25 +96,28 @@ on:
         required: false
       ### makeDockerTagMatrix
       matrixBases:
-        description: List of base images, split by anything
+        description: list of base images, split by anything
         required: false
         type: string
       matrixPlatform:
-        description: List of platforms, split by anything
+        description: list of platforms, split by anything
         required: false
         type: string
       matrixAdditionEvals:
-        description: List of additional values, javascript object code without outer braces
+        description: list of additional values, JavaScript object code without outer braces
         required: false
         type: string
       matrixFlavorEval:
-        description: Javascript code to generate the id
+        description: JavaScript code to generate the id
         required: false
         type: string
     secrets:
       dockerHubToken:
         required: false
-        description: 'Create here with “Read, Write”: https://hub.docker.com/settings/security?generateToken=true'
+        description: |-
+          API token for Docker Hub
+
+          Create here with “Read, Write”: https://hub.docker.com/settings/security?generateToken=true
     outputs:
       meta:
         value: ${{ jobs.invoke.outputs.meta }}
@@ -133,7 +137,7 @@ jobs:
     uses: ./.github/workflows/makeDockerTagMatrix.yml
     with:
       bases: ${{ inputs.matrixBases }}
-      platform: ${{ inputs.matrixPlatform }}
+      platform: ${{ inputs.matrixPlatform || inputs.arch }}
       additionEvals: ${{ inputs.matrixAdditionEvals }}
       flavorEval: ${{ inputs.matrixFlavorEval }}
   invoke:

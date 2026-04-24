@@ -5,7 +5,7 @@ on:
         type: string
         required: false
         default: linux/amd64
-        description: Image arch to build and run
+        description: image arch to build and run
       buildContext:
         type: string
         required: false
@@ -16,39 +16,39 @@ on:
       imageFolder:
         type: string
         required: false
-        description: Folder to save the build to
+        description: folder to save the build to
       imageFile:
         type: string
         required: false
-        description: File basename of image to save the build to
+        description: file basename of image to save the build to
       imageArtifact:
         type: string
         required: false
-        description: Name of the image artifact to save the build to
+        description: name of the image artifact to save the build to
       cacheTo:
         type: string
         required: false
-        description: Cache key to save the build to
+        description: cache key to save the build to
       cacheFrom:
         type: string
         required: false
-        description: Cache key to load the build from
+        description: cache key to load the build from
       cacheKey:
         type: string
         required: false
-        description: Cache key to seperate unrelated caches
+        description: cache key to separate unrelated caches
       imageName:
         type: string
         required: true
-        description: Name of the image to build
+        description: name of the image to build
       nameSuffix:
         type: string
         required: false
-        description: Suffix for job naming (just a visual thing)
+        description: suffix for job naming (just a visual thing)
       tag:
         type: string
         required: false
-        description: Tag of the image to build
+        description: tag of the image to build
         default: ci
       id:
         type: string
@@ -119,9 +119,23 @@ jobs:
             const outputs: Record<string, string> = {
               ...inputs,
             }
+            const isNativeArch = (arch: string) => {
+              const currentArch = String(runner.arch || '').toLowerCase()
+              if (currentArch === 'x64') {
+                return arch === 'linux/amd64'
+              }
+              if (currentArch === 'arm64') {
+                return arch === 'linux/arm64' || arch === 'linux/arm64/v8'
+              }
+              if (currentArch === 'arm') {
+                return arch === 'linux/arm/v7'
+              }
+              return false
+            }
             if (!outputs.id) {
               outputs.id = 'default'
             }
+            outputs.isNativeArch = String(isNativeArch(outputs.arch))
             if (!outputs.cacheKey) {
               const refName = github.ref_name || getRefName(github.ref)
               outputs.cacheKey = `${github.repository}|${github.workflow}|${refName}|${outputs.id}`.replaceAll(/[ ,/_|]+/g, '_').replaceAll('\\', '_')
@@ -157,10 +171,8 @@ jobs:
             }
             core.setOutput('value', JSON.stringify(outputs))
       - name: setupQemu
-        if: ${{ steps.getInputs.outputs.arch != 'linux/amd64' }}
+        if: ${{ steps.getInputs.outputs.isNativeArch != 'true' }}
         uses: docker/setup-qemu-action@v4.0.0
-        with:
-          platforms: ${{ steps.getInputs.outputs.arch }}
       - name: setupBuildx
         uses: docker/setup-buildx-action@v4.0.0
         with:

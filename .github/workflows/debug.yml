@@ -13,11 +13,13 @@ jobs:
         id: prepare
         shell: bash
         run: |-
-          printf 'homeFolder=%s\n' "$(realpath ~)" >> $GITHUB_OUTPUT
-          printf 'cwdFolder=%s\n' "$(realpath .)" >> $GITHUB_OUTPUT
-          printf 'cwdParentFolder=%s\n' "$(realpath ..)" >> $GITHUB_OUTPUT
-          printf 'workspaceFolder=%s\n' "$(realpath "$GITHUB_WORKSPACE")" >> $GITHUB_OUTPUT
-          printf 'tempFolder=%s\n' "$(realpath "$RUNNER_TEMP")" >> $GITHUB_OUTPUT
+          {
+            printf 'homeFolder=%s\n' "$(realpath ~)"
+            printf 'cwdFolder=%s\n' "$(realpath .)"
+            printf 'cwdParentFolder=%s\n' "$(realpath ..)"
+            printf 'workspaceFolder=%s\n' "$(realpath "$GITHUB_WORKSPACE")"
+            printf 'tempFolder=%s\n' "$(realpath "$RUNNER_TEMP")"
+          } >> "$GITHUB_OUTPUT"
       - name: checkout
         uses: actions/checkout@v6.0.2
       - name: installPackages
@@ -54,7 +56,7 @@ jobs:
       - name: dumpContext (matrix)
         shell: bash
         env:
-          object: ${{ toJson(env) }}
+          object: ${{ toJson(matrix) }}
         run: |-
           set -o xtrace
           jq --indent 2 --color-output . <<< "$object"
@@ -112,10 +114,11 @@ jobs:
           styleBlue=$(TERM=xterm-256color tput setaf 6)
           styleOrange=$(TERM=xterm-256color tput setaf 172)
           styleReset=$(TERM=xterm-256color tput sgr0)
-          keys=($(printenv | cut -d'=' -f1))
-          sortedKeys=($(printf '%s\n' "${keys[@]}" | tr ' ' '\n' | sort -df))
+          mapfile -t keys < <(printenv | cut -d'=' -f1)
+          mapfile -t sortedKeys < <(printf '%s\n' "${keys[@]}" | sort -df)
           for key in "${sortedKeys[@]}"; do
-            declare value=$(printenv "$key")
+            declare value
+            value=$(printenv "$key")
             printf "$styleOrange%s$styleReset: $styleBlue%s$styleReset\n" "$key" "$value"
           done
       - name: osRelease
@@ -127,10 +130,11 @@ jobs:
           styleOrange=$(tput setaf 172)
           styleReset=$(tput sgr0)
           osRelease=$(cat /etc/os-release)
-          keys=($(printf %s "$osRelease" | cut --fields 1 --delimiter = | sort))
+          mapfile -t keys < <(printf %s "$osRelease" | cut --fields 1 --delimiter = | sort)
           for key in "${keys[@]}"; do
             # declare version=$(dpkg --status "$key" | grep --extended-regexp "^Version:" | cut --fields 2- --delimiter ' ')
-            declare value=$(printf %s "$osRelease" | grep --extended-regexp "^$key=" | cut --fields 2- --delimiter =)
+            declare value
+            value=$(printf %s "$osRelease" | grep --extended-regexp "^$key=" | cut --fields 2- --delimiter =)
             if [[ ${value:0:1} == '"' ]]; then
               value=${value:1:-1}
             fi
@@ -144,9 +148,10 @@ jobs:
           styleBlue=$(tput setaf 6)
           styleOrange=$(tput setaf 172)
           styleReset=$(tput sgr0)
-          keys=($(dpkg --get-selections | grep --invert-match deinstall | cut --fields 1))
+          mapfile -t keys < <(dpkg --get-selections | grep --invert-match deinstall | cut --fields 1)
           for key in "${keys[@]}"; do
-            declare version=$(dpkg --status "$key" | grep --extended-regexp "^Version:" | cut --fields 2- --delimiter ' ')
+            declare version
+            version=$(dpkg --status "$key" | grep --extended-regexp "^Version:" | cut --fields 2- --delimiter ' ')
             printf "$styleOrange%s$styleReset: $styleBlue%s$styleReset\n" "$key" "$version"
           done
       - name: pythonPackages
@@ -171,9 +176,9 @@ jobs:
           styleOrange=$(tput setaf 172)
           styleReset=$(tput sgr0)
           while read -r line; do
-          package=$(printf %s "$line" | cut --delimiter ' ' --fields 1)
-          version=$(printf %s "$line" | cut --delimiter ' ' --fields 2-)
-              printf "$styleOrange%s$styleReset: $styleBlue%s$styleReset\n" "$package" "$version"
+            package=$(printf %s "$line" | cut --delimiter ' ' --fields 1)
+            version=$(printf %s "$line" | cut --delimiter ' ' --fields 2-)
+            printf "$styleOrange%s$styleReset: $styleBlue%s$styleReset\n" "$package" "$version"
           done < <(npm list --depth 0 --global --json | jq --raw-output '.dependencies | to_entries[] | "\(.key) \(.value.version)"')
       - name: commands
         shell: bash
@@ -184,20 +189,20 @@ jobs:
           styleOrange=$(tput setaf 172)
           styleReset=$(tput sgr0)
           IFS=: read -ra paths <<< "$PATH"
-          declare -a foundCommands
+          declare -A foundCommands
           for folder in "${paths[@]}"; do
             if [[ -d $folder ]]; then
               files=()
               while read -r -d $'\0' file; do
                 files+=("$file")
               done < <(find "$folder" -maxdepth 1 -type f -executable -printf '%P\0')
-              sortedFiles=($(printf '%s\n' "${files[@]}" | sort -d))
+              mapfile -t sortedFiles < <(printf '%s\n' "${files[@]}" | sort -d)
               if [[ ${#files[@]} -ge 1 ]]; then
                 printf "$styleOrange%s$styleReset (%s)\n" "$folder" "${#files[@]}"
                 for file in "${sortedFiles[@]}"; do
-                  if [[ ! " ${foundCommands[*]} " =~ " ${file} " ]]; then
+                  if [[ -z ${foundCommands[$file]:-} ]]; then
                     printf "$styleBlue%s$styleReset\n" "$file"
-                    foundCommands+=("$file")
+                    foundCommands[$file]=1
                   fi
                 done
               fi

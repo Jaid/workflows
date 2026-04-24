@@ -15,28 +15,28 @@ on:
       imageFolder:
         type: string
         required: false
-        description: Folder to save the build to
+        description: folder to save the build to
       imageFile:
         type: string
         required: false
-        description: File basename of image to save the build to
+        description: file basename of image to save the build to
         default: image.tar
       imageArtifact:
         type: string
         required: false
-        description: Name of the image artifact to save the build to
+        description: name of the image artifact to save the build to
       imageIdentifier:
         type: string
         required: false
-        description: Name and tag of the image to test
+        description: name and tag of the image to test
       nameSuffix:
         type: string
         required: false
-        description: Suffix to append to the job name
+        description: suffix to append to the job name
       arch:
         type: string
         required: false
-        description: Architecture to test
+        description: architecture to test
         default: linux/amd64
       id:
         type: string
@@ -60,9 +60,23 @@ jobs:
             const outputs: Record<string, string> = {
               ...inputs,
             }
+            const isNativeArch = (arch: string) => {
+              const currentArch = String(runner.arch || '').toLowerCase()
+              if (currentArch === 'x64') {
+                return arch === 'linux/amd64'
+              }
+              if (currentArch === 'arm64') {
+                return arch === 'linux/arm64' || arch === 'linux/arm64/v8'
+              }
+              if (currentArch === 'arm') {
+                return arch === 'linux/arm/v7'
+              }
+              return false
+            }
             if (!outputs.id) {
               outputs.id = 'default'
             }
+            outputs.isNativeArch = String(isNativeArch(outputs.arch))
             if (!outputs.imageArtifact) {
               outputs.imageArtifact = `${github.run_id}_${outputs.id}`
             }
@@ -84,12 +98,10 @@ jobs:
           imageFolder: ${{ steps.getInputs.outputs.imageFolder }}
           imageFile: ${{ steps.getInputs.outputs.imageFile }}
         run: |-
-            docker load --input "$imageFolder/$imageFile"
+          docker load --input "$imageFolder/$imageFile"
       - name: setupQemu
-        if: ${{ steps.getInputs.outputs.arch != 'linux/amd64' }}
+        if: ${{ steps.getInputs.outputs.isNativeArch != 'true' }}
         uses: docker/setup-qemu-action@v4.0.0
-        with:
-          platforms: ${{ steps.getInputs.outputs.arch }}
       - id: runImage
         name: runImage
         uses: jaidlab/action-run-typescript@main
@@ -215,7 +227,7 @@ jobs:
             if (inputs.dockerRunArgs) {
               args.push(...splitShellWords(inputs.dockerRunArgs))
             }
-            if (inputs.arch && inputs.arch !== 'linux/amd64') {
+            if (inputs.arch) {
               args.push('--platform', inputs.arch)
             }
             args.push(inputs.imageIdentifier)
@@ -249,7 +261,6 @@ jobs:
             }
             if (executionResult.failed) {
               console.dir(executionResult, {depth: null})
-              throw new Error(`Docker exited with status ${normalizedExitCode}`)
             }
             const fsExtraLike = {
               ...fs,
@@ -285,4 +296,6 @@ jobs:
               if (!validation) {
                 throw new Error(`Validation expression returned ${validation}`)
               }
+            } else if (executionResult.failed) {
+              throw new Error(`Docker exited with status ${normalizedExitCode}`)
             }

@@ -2,15 +2,15 @@ on:
   workflow_call:
     inputs:
       bases:
-        description: List of base images, split by anything
+        description: list of base images, split by anything
         required: false
         type: string
       platform:
-        description: List of platforms, split by anything
+        description: list of platforms, split by anything
         required: false
         type: string
       additionEvals:
-        description: List of additional values, javascript object code without outer braces
+        description: list of additional values, JavaScript object code without outer braces
         required: false
         type: string
       flavorEval:
@@ -19,10 +19,10 @@ on:
         type: string
     outputs:
       output:
-        description: The dynamically generated matrix in JSON
+        description: the dynamically generated matrix in JSON
         value: ${{ jobs.job.outputs.output }}
       nativeArch:
-        description: The dynamically generated matrix in JSON, filtered to only include native arch
+        description: the dynamically generated matrix in JSON, filtered to only include native arch
         value: ${{ jobs.job.outputs.nativeArch }}
 jobs:
   job:
@@ -68,13 +68,18 @@ jobs:
 
             const currentArch = String(runner.arch || '').toLowerCase() as GithubRunnerArch
             const flavorEval = inputs.flavorEval || `[
-              baseShortcuts[base] ?? base,
-              platformShortcuts[platform] ?? platform.replaceAll('/', '_')
+              baseShortcuts[base] ?? getFlavorPart(base),
+              platformShortcuts[platform] ?? getFlavorPart(platform)
             ].filter(part => part?.length).join('-')`
             console.dir({inputs}, {depth: null})
             const matchAll = (regex: RegExp, input: string) => {
               return Array.from(input.matchAll(regex), match => match.groups?.match ?? '')
             }
+            const splitList = (input: string) => matchAll(/(?<match>[^\s,;]+)/g, input)
+            const getFlavorPart = (input: string) => input
+              .replaceAll(/[^0-9A-Za-z_.-]+/g, '-')
+              .replaceAll(/^[^0-9A-Za-z_]+|[^0-9A-Za-z_]+$/g, '')
+              .replaceAll(/-{2,}/g, '-')
             const compareNativeArch = (platform: DockerArch) => {
               if (currentArch === 'x64') {
                 return platform === 'linux/amd64'
@@ -87,8 +92,8 @@ jobs:
               }
               return false
             }
-            const bases = inputs.bases ? matchAll(/(?<match>[\w\-:]+)/g, inputs.bases) : ['']
-            const platforms = inputs.platform ? matchAll(/(?<match>[\d/a-z]+)/g, inputs.platform).map(match => match as DockerArch) : ['linux/amd64']
+            const bases = inputs.bases ? splitList(inputs.bases) : ['']
+            const platforms = inputs.platform ? splitList(inputs.platform).map(match => match as DockerArch) : ['linux/amd64']
             const additions = inputs.additionEvals
               ? inputs.additionEvals.split('\n').map(line => line.trim()).filter(line => line.length > 0)
               : []
@@ -128,6 +133,7 @@ jobs:
                 entry.flavor = runInSandbox<string | undefined>(flavorEval, {
                   ...entry,
                   baseShortcuts,
+                  getFlavorPart,
                   platformShortcuts,
                 })
                 entry.buildArgs = Object.entries(entry).map(([key, value]) => `${key}=${value}`).join('\n')

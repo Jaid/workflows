@@ -13,11 +13,14 @@ on:
       nameSuffix:
         type: string
         required: false
-        description: Suffix to append to job names
+        description: suffix to append to job names
     secrets:
       dockerHubToken:
         required: false
-        description: 'Create here with “Read, Write”: https://hub.docker.com/settings/security?generateToken=true'
+        description: |-
+          API token for Docker Hub
+
+          Create here with “Read, Write”: https://hub.docker.com/settings/security?generateToken=true
     outputs:
       meta:
         value: ${{ jobs.upload.outputs.meta }}
@@ -90,6 +93,9 @@ jobs:
             for (const [key, value] of Object.entries(matrixEntry)) {
               outputs[camelCase(`matrix ${key}`)] = value
             }
+            const baseBuildArgs = typeof outputs.buildArgs === 'string' ? outputs.buildArgs.trim() : ''
+            const matrixBuildArgs = typeof outputs.matrixBuildArgs === 'string' ? outputs.matrixBuildArgs.trim() : ''
+            outputs.effectiveBuildArgs = [baseBuildArgs, matrixBuildArgs].filter(value => value.length > 0).join('\n')
             const {name: repositoryName, owner: repositoryOwner} = getRepositoryFields()
             if (!outputs.matrixId) {
               outputs.matrixId = 'default'
@@ -128,7 +134,7 @@ jobs:
       id: ${{ fromJson(needs.getInputs.outputs.value).matrixId }}
       arch: ${{ fromJson(needs.getInputs.outputs.value).matrixPlatform }}
       buildContext: ${{ fromJson(needs.getInputs.outputs.value).buildContext }}
-      buildArgs: ${{ fromJson(needs.getInputs.outputs.value).matrixBuildArgs }}
+      buildArgs: ${{ fromJson(needs.getInputs.outputs.value).effectiveBuildArgs }}
       imageName: ${{ fromJson(needs.getInputs.outputs.value).imageName }}
       nameSuffix: ${{ fromJson(needs.getInputs.outputs.value).nameSuffix }}
   test:
@@ -176,6 +182,7 @@ jobs:
       flavorSuffix: ${{ fromJson(needs.getInputs.outputs.value).matrixFlavor || fromJson(needs.getInputs.outputs.value).flavorSuffix }}
       flavorConnectionString: ${{ fromJson(needs.getInputs.outputs.value).flavorConnectionString }}
       imageSlug: ${{ fromJson(needs.getInputs.outputs.value).imageSlug }}
+      readmePath: ${{ fromJson(needs.getInputs.outputs.value).readmePath }}
       arch: ${{ fromJson(needs.getInputs.outputs.value).matrixPlatform }}
       buildOutput: ${{ toJson(needs.build.outputs) }}
       nameSuffix: ${{ fromJson(needs.getInputs.outputs.value).nameSuffix }}

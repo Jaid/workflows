@@ -6,12 +6,12 @@ on:
         type: string
         required: false
         default: patch
-        description: Semver segment to bump (→ v[major].[minor].[patch])
+        description: semver segment to bump (→ v[major].[minor].[patch])
       releaseBranch:
         type: string
         required: false
         default: main
-        description: The branch that will create release tags
+        description: the branch that will create release tags
       releaseTitle:
         type: string
         required: false
@@ -33,16 +33,16 @@ on:
       makeLatest:
         type: string
         required: false
-        default: true
+        default: 'true'
     outputs:
       oldTag:
-        description: Name of the old tag used for relative bumping
+        description: name of the old tag used for relative bumping
         value: ${{ jobs.job.outputs.oldTag }}
       newTag:
-        description: Name of the newly created git tag
+        description: name of the newly created git tag
         value: ${{ jobs.job.outputs.newTag }}
       newSemver:
-        description: Semver notation of the newly created git tag
+        description: semver notation of the newly created git tag
         value: ${{ jobs.job.outputs.newSemver }}
       releaseId:
         description: GitHub API ID of newly created release
@@ -51,10 +51,10 @@ on:
         description: HTML link to newly created release
         value: ${{ jobs.job.outputs.releaseUrl }}
       releaseTitle:
-        description: Title of the newly created release with the Handlebars template rendered
+        description: title of the newly created release with the Handlebars template rendered
         value: ${{ jobs.job.outputs.releaseTitle }}
       releaseBody:
-        description: Description of the newly created release with the Handlebars template rendered
+        description: description of the newly created release with the Handlebars template rendered
         value: ${{ jobs.job.outputs.releaseBody }}
 jobs:
   job:
@@ -115,7 +115,7 @@ jobs:
             }
             repo.slug = `${repo.owner}/${repo.name}`
             repo.url = `https://github.com/${repo.slug}`
-            const templateContext: templateContext = {
+            const templateContext = {
               newTag: steps.createTag.outputs.new_tag || '',
               oldTag: steps.createTag.outputs.old_tag || undefined,
               repo,
