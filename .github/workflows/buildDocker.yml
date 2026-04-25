@@ -80,7 +80,7 @@ on:
 jobs:
   build:
     name: build${{ inputs.nameSuffix }}
-    runs-on: ubuntu-24.04-arm
+    runs-on: ${{ (inputs.arch == 'linux/arm64' || inputs.arch == 'linux/arm64/v8') && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     permissions:
       contents: read
     outputs:
