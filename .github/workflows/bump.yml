@@ -34,6 +34,11 @@ on:
         type: string
         required: false
         default: 'true'
+      updateFiles:
+        type: boolean
+        required: false
+        default: false
+        description: update versioned files after creating the release tag
     outputs:
       oldTag:
         description: name of the old tag used for relative bumping
@@ -97,6 +102,85 @@ jobs:
             core.summary.addEOL()
             core.summary.addCodeBlock(Bun.YAML.stringify({oldTag, newTag, newSemver}, null, 2), 'yaml')
             await core.summary.write()
+      - name: updatePackageVersion
+        id: updatePackageVersion
+        if: ${{ inputs.updateFiles }}
+        uses: jaidlab/action-run-typescript@main
+        with:
+          globals: '{steps: ${{ toJson(steps) }}}'
+          code: |-
+            const updatePackageVersion = async () => {
+              const packageJsonFile = Bun.file('package.json')
+              if (!await packageJsonFile.exists()) {
+                console.log('No package.json found, skipping package version update.')
+                core.setOutput('updated', 'false')
+                core.setOutput('reason', 'missingPackageJson')
+                return
+              }
+
+              const packageJsonText = await packageJsonFile.text()
+              const packageJson = JSON.parse(packageJsonText) as Record<string, unknown>
+              if (!Object.hasOwn(packageJson, 'version')) {
+                console.log('package.json has no version field, skipping package version update.')
+                core.setOutput('updated', 'false')
+                core.setOutput('reason', 'missingVersionField')
+                return
+              }
+
+              const newSemver = steps.extractSemvers.outputs.newSemver
+              if (!newSemver) {
+                throw new Error('Cannot update package.json because no new semver was extracted from the created tag.')
+              }
+              const oldVersion = packageJson.version
+              core.setOutput('oldVersion', String(oldVersion ?? ''))
+              core.setOutput('newVersion', newSemver)
+              if (oldVersion === newSemver) {
+                console.log(`package.json version is already ${newSemver}, skipping package version update.`)
+                core.setOutput('updated', 'false')
+                core.setOutput('reason', 'alreadyCurrent')
+                return
+              }
+
+              packageJson.version = newSemver
+              const newline = packageJsonText.includes('\r\n') ? '\r\n' : '\n'
+              const updatedPackageJsonText = `${JSON.stringify(packageJson, null, 2)}\n`.replaceAll('\n', newline)
+              await Bun.write('package.json', updatedPackageJsonText)
+
+              const status = (await Bun.$`git status --porcelain -- package.json`.text()).trim()
+              if (!status) {
+                console.log('package.json stayed unchanged after formatting, skipping package version update.')
+                core.setOutput('updated', 'false')
+                core.setOutput('reason', 'unchanged')
+                return
+              }
+
+              const branch = github.ref?.startsWith('refs/heads/') ? github.ref.slice('refs/heads/'.length) : ''
+              if (!branch) {
+                throw new Error(`Cannot push package.json update because the workflow ref is not a branch: ${github.ref}`)
+              }
+
+              await Bun.$`git config user.name ${'github-actions[bot]'}`
+              await Bun.$`git config user.email ${'41898282+github-actions[bot]@users.noreply.github.com'}`
+              await Bun.$`git config commit.gpgsign false`
+              await Bun.$`git add package.json`
+              await Bun.$`git commit --message ${`Update package.json version to ${newSemver}`}`
+              try {
+                await Bun.$`git push origin ${`HEAD:${branch}`}`
+              } catch {
+                console.warn('Initial push failed, retrying after fetching and rebasing the target branch.')
+                await Bun.$`git fetch origin ${branch}`
+                await Bun.$`git rebase ${`origin/${branch}`}`
+                await Bun.$`git push origin ${`HEAD:${branch}`}`
+              }
+
+              core.setOutput('updated', 'true')
+              core.setOutput('reason', 'updated')
+              core.summary.addRaw(`Updated package.json version from ${oldVersion} to ${newSemver}.`)
+              core.summary.addEOL()
+              await core.summary.write()
+            }
+
+            await updatePackageVersion()
       - name: getReleaseTexts
         id: getReleaseTexts
         uses: jaidlab/action-run-typescript@main
