@@ -1,6 +1,6 @@
 # workflows
 
-Reusable GitHub Actions for Bun packages, Docker images and releases. Keep the event triggers and repository-specific choices in the caller; the jobs live here.
+Reusable GitHub Actions for Bun packages, SPA screenshots, Docker images and releases. Keep the event triggers and repository-specific choices in the caller; the jobs live here.
 
 ## Bun CI
 
@@ -63,6 +63,51 @@ with:
 ```
 
 `scripts` run from the repository root; `packageDirectory` selects the package to pack. `bunVersion` and `lint` are also supported (`lint` defaults to `false` for publishing). For tags made by `bump.yml`, trigger the caller on `repository_dispatch: {types: [bumped]}`: GitHub does not start another tag-push workflow for a tag created with `GITHUB_TOKEN`. The publishing workflow checks out `client_payload.newTag` in that case.
+
+## Capture a built SPA
+
+[`captureSpa.yml`](.github/workflows/captureSpa.yml) screenshots the static files from a previous job in the same run. It serves the artifact over loopback HTTP, including `index.html` fallback for client-side routes, and uses [capture-page](https://github.com/Jaid/capture-page) with the hosted runner’s Chrome. The capture job needs only `contents: read` and no secrets.
+
+If the build job already uploads `dist/` as an artifact named `build`, the entire caller addition is:
+
+```yaml
+  screenshot:
+    needs: build
+    uses: Jaid/workflows/.github/workflows/captureSpa.yml@main
+    permissions:
+      contents: read
+```
+
+| Input | Default | Use |
+| --- | --- | --- |
+| `buildArtifact` / `artifactId` | `build` | The build artifact’s name or immutable ID. The ID takes precedence; pass `needs.build.outputs.artifactId` if your build exposes the upload step’s `artifact-id`. |
+| `siteDirectory` | `.` | Directory **inside** the artifact containing `index.html`. Uploading only `dist/` puts its contents at the artifact root; use `dist` if the artifact contains `dist/index.html` alongside other files. |
+| `basePath` / `route` | `/` / `/` | Where the app was built to be mounted and which app route to open. For example, `/docs/` + `/guide?lang=en#install` opens `/docs/guide?lang=en#install`. |
+| `captureOptions` | `{}` | JSON options: `width`, `height`, `deviceScaleFactor`, `fullPage`, `omitBackground`, `format` (`png`, `webp` or `jpeg`), `quality`, `colorScheme`, `motion`, `mediaType`, `wait`, `delay`, `timeout` and `toolCalls`. Defaults include 1920×1080, PNG and `networkidle2`. Use `{"wait":{"selector":"#ready"}}` for hydrated content or `{"wait":"three"}` for visible canvas output. |
+| `imageName` | `screenshot` | Filename stem. Give each capture a distinct name; reruns add the attempt number. |
+| `publishPreview` | `false` | On a public repository’s push or manual run, append the image to the caller’s `ci-screenshots` branch and embed it inline in the run summary. This needs `contents: write` on the caller job. Only the separate preview job gets that permission. |
+
+The run summary links directly to the single-file image artifact. It opens for signed-in readers until the repository’s artifact retention expires. An opt-in public preview uses an immutable raw image URL and stays available independently of artifact retention. Outputs are `artifactId`, `artifactUrl`, `imageFile` and `previewUrl` (empty when unpublished).
+
+For a gallery of routes or viewports, use a caller matrix over the same build:
+
+```yaml
+  screenshots:
+    needs: build
+    strategy:
+      matrix:
+        include:
+          - {name: home, route: '/', width: 1440, height: 900}
+          - {name: mobile-settings, route: '/settings', width: 390, height: 844}
+    uses: Jaid/workflows/.github/workflows/captureSpa.yml@main
+    permissions:
+      contents: write
+    with:
+      imageName: ${{ matrix.name }}
+      route: ${{ matrix.route }}
+      captureOptions: '{"width":${{ matrix.width }},"height":${{ matrix.height }},"format":"webp"}'
+      publishPreview: true
+```
 
 ## Docker images
 

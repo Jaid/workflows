@@ -16,4 +16,4 @@ runs:
     - if: inputs.releaseDependencies == 'true'
       shell: bash
       working-directory: ${{ github.action_path }}
-      run: bun install --frozen-lockfile --production --ignore-scripts
+      run: bun install --filter @jaid/workflows --frozen-lockfile --production --ignore-scripts

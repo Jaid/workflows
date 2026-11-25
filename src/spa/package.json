@@ -1,0 +1,8 @@
+{
+  "name": "@jaid/workflows-spa",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "capture-page": "0.3.0"
+  }
+}

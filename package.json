@@ -2,6 +2,7 @@
   "name": "@jaid/workflows",
   "private": true,
   "type": "module",
+  "workspaces": ["src/spa"],
   "scripts": {
     "test": "bun test ./test",
     "typecheck": "tsc --noEmit"
