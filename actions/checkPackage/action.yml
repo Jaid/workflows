@@ -1,0 +1,50 @@
+name: Check Bun package
+description: Install the caller’s locked dependencies, lint and run its package scripts.
+inputs:
+  bunVersion:
+    description: Bun version override
+    default: ''
+  lint:
+    description: run the lint script or local ESLint
+    default: 'true'
+  scripts:
+    description: package scripts in execution order, one per line
+    default: test
+  ref:
+    description: caller ref (defaults to the event commit)
+    default: ''
+  releaseTag:
+    description: if set, pack and verify this tagged version after the checks
+    default: ''
+  packageDirectory:
+    description: directory containing the package to pack
+    default: .
+outputs:
+  artifact:
+    description: artifact name for the packed release tarball
+    value: ${{ steps.pack.outputs.artifact }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v7.0.1
+      with:
+        ref: ${{ inputs.ref }}
+        persist-credentials: false
+    - uses: oven-sh/setup-bun@v2.2.0
+      with:
+        bun-version: ${{ inputs.bunVersion }}
+        no-cache: ${{ inputs.releaseTag != '' }}
+    - shell: bash
+      run: bun install --frozen-lockfile
+    - shell: bash
+      env:
+        RUN_LINT: ${{ inputs.lint }}
+        PACKAGE_SCRIPTS: ${{ inputs.scripts }}
+      run: bun "$GITHUB_ACTION_PATH/check.ts"
+    - id: pack
+      if: inputs.releaseTag != ''
+      shell: bash
+      env:
+        RELEASE_TAG: ${{ inputs.releaseTag }}
+        PACKAGE_DIRECTORY: ${{ inputs.packageDirectory }}
+      run: bun "$GITHUB_ACTION_PATH/pack.ts"

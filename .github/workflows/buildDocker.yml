@@ -1,59 +1,42 @@
+name: buildDocker
 on:
   workflow_call:
     inputs:
       arch:
         type: string
-        required: false
         default: linux/amd64
-        description: image arch to build and run
       buildContext:
         type: string
-        required: false
         default: src
       buildArgs:
         type: string
-        required: false
       imageFolder:
         type: string
-        required: false
-        description: folder to save the build to
       imageFile:
         type: string
-        required: false
-        description: file basename of image to save the build to
       imageArtifact:
         type: string
-        required: false
-        description: name of the image artifact to save the build to
       cacheTo:
         type: string
-        required: false
-        description: cache key to save the build to
       cacheFrom:
         type: string
-        required: false
-        description: cache key to load the build from
       cacheKey:
         type: string
-        required: false
-        description: cache key to separate unrelated caches
       imageName:
         type: string
-        required: true
-        description: name of the image to build
       nameSuffix:
         type: string
-        required: false
-        description: suffix for job naming (just a visual thing)
       tag:
         type: string
-        required: false
-        description: tag of the image to build
         default: ci
       id:
         type: string
-        required: false
-        description: ID of the image
+      releaseOptions:
+        description: JSON tag and label options from pushDocker
+        type: string
+        default: '{}'
+      flavorSuffix:
+        type: string
     outputs:
       inputs:
         value: ${{ jobs.build.outputs.inputs }}
@@ -65,6 +48,8 @@ on:
         value: ${{ jobs.build.outputs.imageFolder }}
       imageArtifact:
         value: ${{ jobs.build.outputs.imageArtifact }}
+      artifactId:
+        value: ${{ jobs.build.outputs.artifactId }}
       imagePath:
         value: ${{ jobs.build.outputs.imagePath }}
       cacheHint:
@@ -77,130 +62,66 @@ on:
         value: ${{ jobs.build.outputs.context }}
       buildArgs:
         value: ${{ jobs.build.outputs.buildArgs }}
+      tagNames:
+        value: ${{ jobs.build.outputs.tagNames }}
 jobs:
   build:
     name: build${{ inputs.nameSuffix }}
-    runs-on: ${{ (inputs.arch == 'linux/arm64' || inputs.arch == 'linux/arm64/v8') && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    runs-on: ${{ (inputs.arch == 'linux/arm64' || inputs.arch == 'linux/arm64/v8') && 'ubuntu-26.04-arm' || 'ubuntu-26.04' }}
     permissions:
       contents: read
     outputs:
-      inputs: ${{ steps.getInputs.outputs.value }}
-      cacheHint: ${{ steps.getInputs.outputs.cacheHint }}
-      meta: ${{ steps.buildImage.outputs.metadata }}
-      imagePath: ${{ steps.getInputs.outputs.imagePath }}
-      imageFile: ${{ steps.getInputs.outputs.imageFile }}
-      imageFolder: ${{ steps.getInputs.outputs.imageFolder }}
-      imageArtifact: ${{ steps.getInputs.outputs.imageArtifact }}
-      imageName: ${{ steps.getInputs.outputs.imageName }}
-      imageIdentifier: ${{ steps.getInputs.outputs.imageIdentifier }}
-      context: ${{ steps.getInputs.outputs.buildContext }}
-      buildArgs: ${{ steps.getInputs.outputs.buildArgs }}
+      inputs: ${{ steps.config.outputs.value }}
+      meta: ${{ steps.build.outputs.metadata }}
+      imagePath: ${{ steps.config.outputs.imagePath }}
+      imageFile: ${{ steps.config.outputs.imageFile }}
+      imageFolder: ${{ steps.config.outputs.imageFolder }}
+      imageArtifact: ${{ steps.config.outputs.imageArtifact }}
+      artifactId: ${{ steps.artifact.outputs.artifact-id }}
+      cacheHint: ${{ steps.config.outputs.cacheHint }}
+      imageName: ${{ steps.config.outputs.imageName }}
+      imageIdentifier: ${{ steps.config.outputs.imageIdentifier }}
+      context: ${{ inputs.buildContext }}
+      buildArgs: ${{ inputs.buildArgs }}
+      tagNames: ${{ steps.metadata.outputs.tagNames }}
     steps:
-      - name: checkout
-        uses: actions/checkout@v6.0.2
-      - id: getInputs
-        name: getInputs
-        uses: jaidlab/action-run-typescript@main
+      - uses: actions/checkout@v7.0.1
         with:
-          globals: '{inputs: ${{ toJSON(inputs) }}}'
-          code: |-
-            import path from 'node:path'
-
-            const getRefName = (ref?: string) => {
-              if (!ref) {
-                return ''
-              }
-              return ref
-                .replace(/^refs\/heads\//, '')
-                .replace(/^refs\/tags\//, '')
-                .replace(/^refs\/pull\//, '')
-            }
-
-            const outputs: Record<string, string> = {
-              ...inputs,
-            }
-            const isNativeArch = (arch: string) => {
-              const currentArch = String(runner.arch || '').toLowerCase()
-              if (currentArch === 'x64') {
-                return arch === 'linux/amd64'
-              }
-              if (currentArch === 'arm64') {
-                return arch === 'linux/arm64' || arch === 'linux/arm64/v8'
-              }
-              if (currentArch === 'arm') {
-                return arch === 'linux/arm/v7'
-              }
-              return false
-            }
-            if (!outputs.id) {
-              outputs.id = 'default'
-            }
-            outputs.isNativeArch = String(isNativeArch(outputs.arch))
-            if (!outputs.cacheKey) {
-              const refName = github.ref_name || getRefName(github.ref)
-              outputs.cacheKey = `${github.repository}|${github.workflow}|${refName}|${outputs.id}`.replaceAll(/[ ,/_|]+/g, '_').replaceAll('\\', '_')
-            }
-            if (!outputs.cacheFrom) {
-              outputs.cacheFrom = `type=gha,scope=${outputs.cacheKey}`
-            }
-            if (!outputs.cacheTo) {
-              outputs.cacheTo = `${outputs.cacheFrom},mode=max`
-            }
-            outputs.cacheHint = outputs.cacheTo
-              .replace('mode=max', '')
-              .replace(/^,+/, '')
-              .replace(/,+$/, '')
-              .replaceAll(/,+/g, ',')
-            if (!outputs.imageArtifact) {
-              outputs.imageArtifact = `${github.run_id}_${outputs.id}`
-            }
-            if (!outputs.imageFile) {
-              outputs.imageFile = `${outputs.imageName}.tar`
-            }
-            if (!outputs.imageFolder) {
-              outputs.imageFolder = `/tmp/dockerBuild/${github.run_id}_${outputs.id}`
-            }
-            if (!outputs.imagePath) {
-              outputs.imagePath = path.posix.resolve(outputs.imageFolder, outputs.imageFile)
-            }
-            if (!outputs.imageIdentifier) {
-              outputs.imageIdentifier = `${outputs.imageName}:${outputs.tag}`
-            }
-            for (const [key, value] of Object.entries(outputs)) {
-              core.setOutput(key, value)
-            }
-            core.setOutput('value', JSON.stringify(outputs))
-      - name: setupQemu
-        if: ${{ steps.getInputs.outputs.isNativeArch != 'true' }}
-        uses: docker/setup-qemu-action@v4.0.0
-      - name: setupBuildx
-        uses: docker/setup-buildx-action@v4.0.0
-        with:
-          platforms: ${{ steps.getInputs.outputs.arch }}
-      - name: ensureImageFolder
-        shell: bash
+          persist-credentials: false
+      - uses: $/
+      - id: config
         env:
-          imageFolder: ${{ steps.getInputs.outputs.imageFolder }}
-        run: mkdir --parents "$imageFolder"
-      - name: buildImage
-        id: buildImage
-        uses: docker/build-push-action@v7.0.0
+          WORKFLOW_INPUTS: ${{ toJSON(inputs) }}
+        run: bun "$WORKFLOWS_PATH/src/docker/build.ts"
+      - id: metadata
+        uses: $/actions/dockerMetadata
         with:
-          context: ${{ steps.getInputs.outputs.buildContext }}
-          platforms: ${{ steps.getInputs.outputs.arch }}
-          build-args: ${{ steps.getInputs.outputs.buildArgs }}
-          outputs: type=docker,dest=${{ steps.getInputs.outputs.imagePath }}
-          cache-to: ${{ steps.getInputs.outputs.cacheTo }}
-          cache-from: ${{ steps.getInputs.outputs.cacheFrom }}
-          tags: ${{ steps.getInputs.outputs.imageIdentifier }}
-      - name: saveArtifact
-        if: ${{ steps.getInputs.outputs.imageArtifact }}
-        uses: actions/upload-artifact@v7.0.0
-        with:
-          name: ${{ steps.getInputs.outputs.imageArtifact }}
-          path: ${{ steps.getInputs.outputs.imageFolder }}
-      - id: checkArtifact
-        shell: bash
+          options: ${{ inputs.releaseOptions }}
+          imageName: ${{ steps.config.outputs.imageName }}
+          id: ${{ steps.config.outputs.id }}
+          flavorSuffix: ${{ inputs.flavorSuffix }}
+      - if: steps.config.outputs.isNativeArch != 'true'
+        uses: docker/setup-qemu-action@v4.4.0
+      - uses: docker/setup-buildx-action@v4.4.1
+      - run: mkdir -p -- "$IMAGE_FOLDER"
         env:
-          imageFolder: ${{ steps.getInputs.outputs.imageFolder }}
-        run: ls -l --almost-all --block-size 1 --color=always "$imageFolder"
+          IMAGE_FOLDER: ${{ steps.config.outputs.imageFolder }}
+      - id: build
+        uses: docker/build-push-action@v7.4.0
+        with:
+          context: ${{ inputs.buildContext }}
+          platforms: ${{ inputs.arch }}
+          build-args: ${{ inputs.buildArgs }}
+          outputs: type=docker,dest=${{ steps.config.outputs.imagePath }}
+          cache-to: ${{ steps.config.outputs.cacheTo }}
+          cache-from: ${{ steps.config.outputs.cacheFrom }}
+          tags: ${{ steps.config.outputs.imageIdentifier }}
+          labels: ${{ steps.metadata.outputs.labels }}
+      - id: artifact
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: ${{ steps.config.outputs.imageArtifact }}
+          path: ${{ steps.config.outputs.imagePath }}
+          if-no-files-found: error
+          overwrite: ${{ inputs.imageArtifact != '' && github.run_attempt != '1' }}
+          compression-level: 1

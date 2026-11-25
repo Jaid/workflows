@@ -1,0 +1,16 @@
+{
+  "name": "@jaid/workflows",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test ./test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "handlebars": "4.7.10"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.5",
+    "typescript": "7.0.2"
+  }
+}

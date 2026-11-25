@@ -4,244 +4,91 @@ on:
     inputs:
       bumpAmount:
         type: string
-        required: false
         default: patch
-        description: semver segment to bump (→ v[major].[minor].[patch])
+        description: major, minor, patch or none
       releaseBranch:
         type: string
-        required: false
         default: main
-        description: the branch that will create release tags
       releaseTitle:
         type: string
-        required: false
         default: |-
           {{#if oldTag}}{{repo.slug}} {{newTag}}{{else}}[Initial release] {{repo.slug}} {{newTag}}{{/if}}
-        description: |-
-          Handlebars template for release title
-
-          Available variables: repo.owner, repo.name, repo.slug, repo.url, oldTag, newTag
       releaseBody:
         type: string
-        required: false
         default: |-
           {{#if oldTag}}[{{oldTag}}]({{repo.url}}/tree/{{oldTag}}) [→]({{repo.url}}/compare/{{oldTag}}...{{newTag}}) [{{newTag}}]({{repo.url}}/tree/{{newTag}}){{else}}[{{newTag}}]({{repo.url}}/tree/{{newTag}}){{/if}}
-        description: |-
-          Handlebars template for release body
-
-          Available variables: repo.owner, repo.name, repo.slug, repo.url, oldTag, newTag
       makeLatest:
         type: string
-        required: false
         default: 'true'
+        description: 'GitHub release latest setting: true, false or legacy'
       updateFiles:
         type: boolean
-        required: false
-        default: false
-        description: update versioned files after creating the release tag
+        description: commit the root package.json version before tagging, if it has a version field
     outputs:
       oldTag:
-        description: name of the old tag used for relative bumping
-        value: ${{ jobs.job.outputs.oldTag }}
+        value: ${{ jobs.release.outputs.oldTag }}
       newTag:
-        description: name of the newly created git tag
-        value: ${{ jobs.job.outputs.newTag }}
+        value: ${{ jobs.release.outputs.newTag }}
       newSemver:
-        description: semver notation of the newly created git tag
-        value: ${{ jobs.job.outputs.newSemver }}
+        value: ${{ jobs.release.outputs.newSemver }}
       releaseId:
-        description: GitHub API ID of newly created release
-        value: ${{ jobs.job.outputs.releaseId }}
+        value: ${{ jobs.release.outputs.releaseId }}
       releaseUrl:
-        description: HTML link to newly created release
-        value: ${{ jobs.job.outputs.releaseUrl }}
+        value: ${{ jobs.release.outputs.releaseUrl }}
       releaseTitle:
-        description: title of the newly created release with the Handlebars template rendered
-        value: ${{ jobs.job.outputs.releaseTitle }}
+        value: ${{ jobs.release.outputs.releaseTitle }}
       releaseBody:
-        description: description of the newly created release with the Handlebars template rendered
-        value: ${{ jobs.job.outputs.releaseBody }}
+        value: ${{ jobs.release.outputs.releaseBody }}
 jobs:
-  job:
-    runs-on: ubuntu-24.04-arm
+  release:
+    if: github.ref == format('refs/heads/{0}', inputs.releaseBranch) && contains(fromJSON('["workflow_dispatch","repository_dispatch","push","schedule"]'), github.event_name)
+    runs-on: ubuntu-latest
+    concurrency:
+      group: bump-${{ inputs.releaseBranch }}
+      cancel-in-progress: false
     permissions:
       contents: write
+    outputs:
+      oldTag: ${{ steps.tag.outputs.oldTag }}
+      newTag: ${{ steps.tag.outputs.newTag }}
+      newSemver: ${{ steps.tag.outputs.newSemver }}
+      releaseId: ${{ steps.release.outputs.id }}
+      releaseUrl: ${{ steps.release.outputs.html_url }}
+      releaseTitle: ${{ steps.tag.outputs.releaseTitle }}
+      releaseBody: ${{ steps.tag.outputs.releaseBody }}
     steps:
-      - name: checkout
-        uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
-      - name: createTag
-        id: createTag
-        uses: anothrNick/github-tag-action@1.75.0
+          persist-credentials: false
+      - uses: $/
+        with:
+          releaseDependencies: 'true'
+      - id: tag
+        working-directory: ${{ env.WORKFLOWS_PATH }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WITH_V: true
-          DEFAULT_BUMP: ${{ inputs.bumpAmount }}
-          RELEASE_BRANCHES: ${{ inputs.releaseBranch }}
-      - name: extractSemvers
-        id: extractSemvers
-        uses: jaidlab/action-run-typescript@main
-        with:
-          globals: '{steps: ${{ toJson(steps) }}}'
-          code: |-
-            const extractSemver = (tag: string) => {
-              return /(?<versionPrefix>v?)(?<version>\d+\.\d+\.\d+)/.exec(tag)?.groups
-            }
-            const oldTag = steps.createTag.outputs.old_tag
-            const newTag = steps.createTag.outputs.new_tag
-            const newSemver = extractSemver(newTag)
-            core.setOutput('newSemver', newSemver?.version ?? '')
-            const getSummary = () => {
-              if (!oldTag) {
-                return `[${newTag}](${github.event.repository.html_url}/releases/tag/${newTag})`
-              }
-              return `[${oldTag}](${github.event.repository.html_url}/releases/tag/${oldTag}) → [${newTag}](${github.event.repository.html_url}/releases/tag/${newTag})`
-            }
-            core.summary.addRaw(getSummary())
-            core.summary.addEOL()
-            core.summary.addCodeBlock(Bun.YAML.stringify({oldTag, newTag, newSemver}, null, 2), 'yaml')
-            await core.summary.write()
-      - name: updatePackageVersion
-        id: updatePackageVersion
-        if: ${{ inputs.updateFiles }}
-        uses: jaidlab/action-run-typescript@main
-        with:
-          globals: '{steps: ${{ toJson(steps) }}}'
-          code: |-
-            const updatePackageVersion = async () => {
-              const packageJsonFile = Bun.file('package.json')
-              if (!await packageJsonFile.exists()) {
-                console.log('No package.json found, skipping package version update.')
-                core.setOutput('updated', 'false')
-                core.setOutput('reason', 'missingPackageJson')
-                return
-              }
-
-              const packageJsonText = await packageJsonFile.text()
-              const packageJson = JSON.parse(packageJsonText) as Record<string, unknown>
-              if (!Object.hasOwn(packageJson, 'version')) {
-                console.log('package.json has no version field, skipping package version update.')
-                core.setOutput('updated', 'false')
-                core.setOutput('reason', 'missingVersionField')
-                return
-              }
-
-              const newSemver = steps.extractSemvers.outputs.newSemver
-              if (!newSemver) {
-                throw new Error('Cannot update package.json because no new semver was extracted from the created tag.')
-              }
-              const oldVersion = packageJson.version
-              core.setOutput('oldVersion', String(oldVersion ?? ''))
-              core.setOutput('newVersion', newSemver)
-              if (oldVersion === newSemver) {
-                console.log(`package.json version is already ${newSemver}, skipping package version update.`)
-                core.setOutput('updated', 'false')
-                core.setOutput('reason', 'alreadyCurrent')
-                return
-              }
-
-              packageJson.version = newSemver
-              const newline = packageJsonText.includes('\r\n') ? '\r\n' : '\n'
-              const updatedPackageJsonText = `${JSON.stringify(packageJson, null, 2)}\n`.replaceAll('\n', newline)
-              await Bun.write('package.json', updatedPackageJsonText)
-
-              const status = (await Bun.$`git status --porcelain -- package.json`.text()).trim()
-              if (!status) {
-                console.log('package.json stayed unchanged after formatting, skipping package version update.')
-                core.setOutput('updated', 'false')
-                core.setOutput('reason', 'unchanged')
-                return
-              }
-
-              const branch = github.ref?.startsWith('refs/heads/') ? github.ref.slice('refs/heads/'.length) : ''
-              if (!branch) {
-                throw new Error(`Cannot push package.json update because the workflow ref is not a branch: ${github.ref}`)
-              }
-
-              await Bun.$`git config user.name ${'github-actions[bot]'}`
-              await Bun.$`git config user.email ${'41898282+github-actions[bot]@users.noreply.github.com'}`
-              await Bun.$`git config commit.gpgsign false`
-              await Bun.$`git add package.json`
-              await Bun.$`git commit --message ${`Update package.json version to ${newSemver}`}`
-              try {
-                await Bun.$`git push origin ${`HEAD:${branch}`}`
-              } catch {
-                console.warn('Initial push failed, retrying after fetching and rebasing the target branch.')
-                await Bun.$`git fetch origin ${branch}`
-                await Bun.$`git rebase ${`origin/${branch}`}`
-                await Bun.$`git push origin ${`HEAD:${branch}`}`
-              }
-
-              core.setOutput('updated', 'true')
-              core.setOutput('reason', 'updated')
-              core.summary.addRaw(`Updated package.json version from ${oldVersion} to ${newSemver}.`)
-              core.summary.addEOL()
-              await core.summary.write()
-            }
-
-            await updatePackageVersion()
-      - name: getReleaseTexts
-        id: getReleaseTexts
-        uses: jaidlab/action-run-typescript@main
-        with:
-          globals: |-
-            {
-              inputs: ${{ toJson(inputs) }},
-              steps: ${{ toJson(steps) }}
-            }
-          dependencies: zeug
-          code: |-
-            import {renderHandlebars} from 'zeug'
-            const repo = {
-              name: github.repo?.repo ?? '',
-              owner: github.repo?.owner ?? '',
-            }
-            repo.slug = `${repo.owner}/${repo.name}`
-            repo.url = `https://github.com/${repo.slug}`
-            const templateContext = {
-              newTag: steps.createTag.outputs.new_tag || '',
-              oldTag: steps.createTag.outputs.old_tag || undefined,
-              repo,
-            }
-            core.setOutput('title', renderHandlebars(inputs.releaseTitle, templateContext))
-            core.setOutput('body', renderHandlebars(inputs.releaseBody, templateContext))
-      - name: updateRelease
-        id: updateRelease
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW_INPUTS: ${{ toJSON(inputs) }}
+        run: |
+          gh auth setup-git --hostname github.com
+          bun src/release.ts "$GITHUB_WORKSPACE"
+      - id: release
+        if: steps.tag.outputs.newTag != ''
         uses: ncipollo/release-action@v1.21.0
         with:
           allowUpdates: true
-          name: ${{ steps.getReleaseTexts.outputs.title }}
-          body: ${{ steps.getReleaseTexts.outputs.body }}
-          tag: ${{ steps.createTag.outputs.new_tag }}
+          name: ${{ steps.tag.outputs.releaseTitle }}
+          body: ${{ steps.tag.outputs.releaseBody }}
+          tag: ${{ steps.tag.outputs.newTag }}
           makeLatest: ${{ inputs.makeLatest }}
-      - name: prepareDispatch
-        id: prepareDispatch
-        uses: jaidlab/action-run-typescript@main
-        with:
-          globals: '{steps: ${{ toJson(steps) }}}'
-          code: |-
-            const output = {
-              newSemver: steps.extractSemvers.outputs.newSemver,
-              newTag: steps.createTag.outputs.new_tag,
-              oldTag: steps.createTag.outputs.old_tag,
-              releaseBody: steps.getReleaseTexts.outputs.body,
-              releaseId: steps.updateRelease.outputs.id,
-              releaseTitle: steps.getReleaseTexts.outputs.title,
-              releaseUrl: steps.updateRelease.outputs.html_url,
-            }
-            core.setOutput('value', JSON.stringify(output))
-      - name: triggerDispatch
-        id: triggerDispatch
-        uses: peter-evans/repository-dispatch@v4.0.1
-        with:
-          event-type: bumped
-          client-payload: ${{ steps.prepareDispatch.outputs.value }}
-    outputs:
-      oldTag: ${{ steps.createTag.outputs.old_tag }}
-      newTag: ${{ steps.createTag.outputs.new_tag }}
-      newSemver: ${{ steps.extractSemvers.outputs.newSemver }}
-      releaseId: ${{ steps.updateRelease.outputs.id }}
-      releaseUrl: ${{ steps.updateRelease.outputs.html_url }}
-      releaseTitle: ${{ steps.getReleaseTexts.outputs.title }}
-      releaseBody: ${{ steps.getReleaseTexts.outputs.body }}
+      - name: Dispatch bumped
+        if: steps.tag.outputs.newTag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PAYLOAD: ${{ steps.tag.outputs.payload }}
+          RELEASE_ID: ${{ steps.release.outputs.id }}
+          RELEASE_URL: ${{ steps.release.outputs.html_url }}
+        run: |
+          jq -cn --argjson data "$PAYLOAD" --arg id "$RELEASE_ID" --arg url "$RELEASE_URL" '{event_type:"bumped", client_payload:($data + {releaseId:$id, releaseUrl:$url})}' |
+            gh api --method POST "repos/$GITHUB_REPOSITORY/dispatches" --input -
+          printf 'Released <%s>\n' "$RELEASE_URL" >> "$GITHUB_STEP_SUMMARY"

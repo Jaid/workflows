@@ -1,0 +1,7 @@
+# GitHub.com runner labels and self-repository action syntax added after actionlint 1.7.12.
+self-hosted-runner:
+  labels: [ubuntu-26.04, ubuntu-26.04-arm]
+paths:
+  .github/workflows/*.yml:
+    ignore:
+      - 'specifying action "\$/(actions/(checkPackage|dockerMetadata))?" in invalid format because ref is missing'

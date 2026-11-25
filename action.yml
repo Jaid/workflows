@@ -1,0 +1,19 @@
+name: Set up workflow helpers
+description: Make the Bun scripts shipped with this workflow revision available to the job.
+inputs:
+  releaseDependencies:
+    description: install the locked Handlebars runtime for the release helpers
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - uses: oven-sh/setup-bun@v2.2.0
+      with:
+        bun-version: latest
+        no-cache: true
+    - shell: bash
+      run: printf 'WORKFLOWS_PATH=%s\n' "$GITHUB_ACTION_PATH" >> "$GITHUB_ENV"
+    - if: inputs.releaseDependencies == 'true'
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: bun install --frozen-lockfile --production --ignore-scripts

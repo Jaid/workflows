@@ -31,8 +31,6 @@ Temporary Items
 !.vscode/launch.json
 !.vscode/extensions.json
 !.vscode/*.code-snippets
-!.vscode/extensions/
-!.vscode/extensions/**
 
 # dotenv
 .env

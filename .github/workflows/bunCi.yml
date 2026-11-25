@@ -1,0 +1,29 @@
+name: bunCi
+on:
+  workflow_call:
+    inputs:
+      runner:
+        type: string
+        default: ubuntu-latest
+      bunVersion:
+        type: string
+        description: override the caller’s packageManager or engines.bun version
+      lint:
+        type: boolean
+        default: true
+        description: run the lint script or local ESLint before the package scripts
+      scripts:
+        type: string
+        default: test
+        description: package scripts in execution order, one per line
+jobs:
+  check:
+    runs-on: ${{ inputs.runner }}
+    permissions:
+      contents: read
+    steps:
+      - uses: $/actions/checkPackage
+        with:
+          bunVersion: ${{ inputs.bunVersion }}
+          lint: ${{ inputs.lint }}
+          scripts: ${{ inputs.scripts }}

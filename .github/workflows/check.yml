@@ -1,0 +1,59 @@
+name: check
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  workflows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker://rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 # 1.7.12
+      - name: Verify the workflow lockfile
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh extension install github/gh-actions-lock --pin v0.5.1
+          gh actions-lock --verify
+  helpers:
+    uses: ./.github/workflows/bunCi.yml
+    with:
+      lint: false
+      scripts: |
+        typecheck
+        test
+  docker:
+    uses: ./.github/workflows/pushDocker.yml
+    with:
+      publish: false
+      buildContext: test/fixtures/docker
+      matrixPlatform: linux/amd64 linux/arm64
+      testAppArgs: 'one "two words"'
+      testEval: status === 0 && stdout === 'one|two words'
+  registry:
+    needs: docker
+    runs-on: ubuntu-26.04
+    services:
+      registry:
+        image: registry:3@sha256:82f6ff4a7f982960c8aa51617fea3aabc485df6e55cce80d22deb1de36f1bc3c
+        ports: ['127.0.0.1:5000:5000']
+    steps:
+      - uses: $/
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          artifact-ids: ${{ needs.docker.outputs.artifactId }}
+          path: ${{ runner.temp }}/smoke
+          merge-multiple: true
+      - name: Verify both registry tags against the tested archive
+        env:
+          REGISTRY: localhost:5000
+          ARCHIVE: ${{ runner.temp }}/smoke/${{ needs.docker.outputs.imageFile }}
+        run: |
+          mkdir -p "$HOME/.config/containers"
+          printf '[[registry]]\nlocation = "%s"\ninsecure = true\n' "$REGISTRY" > "$HOME/.config/containers/registries.conf"
+          bun "$WORKFLOWS_PATH/test/registry.ts"

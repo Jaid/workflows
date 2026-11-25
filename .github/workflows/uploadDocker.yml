@@ -1,105 +1,66 @@
+name: uploadDocker
 on:
   workflow_call:
     inputs:
       arch:
         type: string
-        required: false
         default: linux/amd64
-        description: image arch to build and push
       dockerHubUser:
         type: string
-        required: false
-        description: If unset, the Docker Hub user will be the same as the GitHub user
       dockerHubRegistry:
         type: string
-        required: false
         default: docker.io
       githubRegistry:
         type: string
-        required: false
         default: ghcr.io
       baseTags:
         type: string
-        required: false
         default: type=ref,event=branch
       addShaTags:
         type: boolean
-        required: false
-        default: false
-        description: If true, create a Docker image tag named after the commit’s SHA hash (good for persistence and debugging, but might produce a lot of clutter)
       addScheduleTags:
         type: boolean
-        required: false
-        default: false
-        description: If true, create Docker image tags named after the current date (good for persistence and debugging, but might produce a lot of clutter) (only on schedule events)
       addVersionTag:
         type: boolean
-        required: false
-        default: false
-        description: If true, create a Docker image tag named after the new current version (only on push tag events)
       versionTagPrefix:
         type: string
-        required: false
-        description: Will be appended to the automatically generated version tag (only if addVersionTag is true and event is push tag)
       additionalTags:
         type: string
-        required: false
-        default: ''
       versionTag:
         type: string
-        required: false
-        default: ''
       versionTagSemverPrefix:
         type: string
-        required: false
-        default: ''
-        description: If given, this will be the semver’s prefix
       flavorLatest:
         type: string
-        required: false
         default: auto
       flavorPrefix:
         type: string
-        required: false
       flavorSuffix:
         type: string
-        required: false
       flavorConnectionString:
         type: string
-        required: false
         default: '-'
       nameSuffix:
         type: string
-        required: false
-        description: suffix to append to the job name
       imageSlug:
         type: string
-        required: false
-        description: slug of the image
       id:
         type: string
-        required: false
-        description: ID of the image
       buildOutput:
         type: string
         required: true
-        description: output of the build job in JSON
+        description: buildDocker job outputs as JSON
+      useBuildTags:
+        type: boolean
+        description: use the exact tags resolved at build time
       title:
         type: string
-        required: false
-        description: title of the image
+        description: image titles are baked in at build time via buildDocker.releaseOptions
       readmePath:
         type: string
-        required: false
-        default: ''
-        description: path of the readme to upload to Docker Hub, if set
     secrets:
       dockerHubToken:
         required: false
-        description: |-
-          API token for Docker Hub
-
-          Create here with “Read, Write”: https://hub.docker.com/settings/security?generateToken=true
     outputs:
       meta:
         value: ${{ jobs.upload.outputs.meta }}
@@ -115,246 +76,66 @@ on:
         value: ${{ jobs.upload.outputs.imageUser }}
 jobs:
   upload:
+    if: ${{ !startsWith(github.event_name, 'pull_request') }}
     name: upload${{ inputs.nameSuffix }}
-    runs-on: ${{ (inputs.arch == 'linux/arm64' || inputs.arch == 'linux/arm64/v8') && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
-    permissions:
-      contents: read
-      packages: write
+    # Copying a Docker archive needs no emulation, even for ARM images.
+    runs-on: ubuntu-26.04
+    env:
+      HUB_ENABLED: ${{ secrets.dockerHubToken != '' }}
     outputs:
-      meta: ${{ steps.dockerPush.outputs.metadata }}
-      digest: ${{ steps.dockerPush.outputs.digest }}
-      imageId: ${{ steps.dockerPush.outputs.imageid }}
-      imageName: ${{ steps.getInputs.outputs.imageName }}
-      imageSlug: ${{ steps.getInputs.outputs.imageSlug }}
-      imageUser: ${{ steps.getInputs.outputs.imageUser }}
+      meta: ${{ steps.publish.outputs.meta }}
+      digest: ${{ steps.publish.outputs.digest }}
+      imageId: ${{ steps.publish.outputs.imageId }}
+      imageName: ${{ steps.registry.outputs.imageName }}
+      imageSlug: ${{ steps.registry.outputs.imageSlug }}
+      imageUser: ${{ steps.registry.outputs.imageUser }}
     steps:
-      - name: checkout
-        uses: actions/checkout@v6.0.2
-      - id: getInputs
-        name: getInputs
-        uses: jaidlab/action-run-typescript@main
+      - uses: $/
+      - id: registry
+        env:
+          WORKFLOW_INPUTS: ${{ toJSON(inputs) }}
+          IMAGE_NAME: ${{ fromJSON(inputs.buildOutput).imageName }}
+        run: bun "$WORKFLOWS_PATH/src/docker/registry.ts"
+      - id: metadata
+        if: ${{ !inputs.useBuildTags }}
+        uses: $/actions/dockerMetadata
         with:
-          globals: '{inputs: ${{ toJSON(inputs) }}}'
-          dependencies: es-toolkit
-          code: |-
-            import {camelCase} from 'es-toolkit/string'
-            const buildOutput = JSON.parse(String(inputs.buildOutput)) as Record<string, unknown>
-            const outputs: Record<string, unknown> = {
-              ...Object.fromEntries(Object.entries(inputs).filter(([key]) => key !== 'buildOutput')),
-            }
-            const isNativeArch = (arch: string) => {
-              const currentArch = String(runner.arch || '').toLowerCase()
-              if (currentArch === 'x64') {
-                return arch === 'linux/amd64'
-              }
-              if (currentArch === 'arm64') {
-                return arch === 'linux/arm64' || arch === 'linux/arm64/v8'
-              }
-              if (currentArch === 'arm') {
-                return arch === 'linux/arm/v7'
-              }
-              return false
-            }
-            for (const [key, value] of Object.entries(buildOutput)) {
-              outputs[camelCase(`build ${key}`)] = value
-            }
-            if (!outputs.id) {
-              outputs.id = 'default'
-            }
-            if (!outputs.imageName) {
-              outputs.imageName = buildOutput.imageName
-            }
-            if (!outputs.imageUser) {
-              outputs.imageUser = outputs.dockerHubUser || String(outputs.imageSlug ?? '').split('/')[0] || github.repo?.owner?.toLowerCase() || ''
-            }
-            if (!outputs.dockerHubUser) {
-              outputs.dockerHubUser = outputs.imageUser
-            }
-            if (!outputs.imageSlug && outputs.imageUser && outputs.imageName) {
-              outputs.imageSlug = `${outputs.imageUser}/${outputs.imageName}`
-            }
-            if (!outputs.title) {
-              if (outputs.id === 'default') {
-                outputs.title = outputs.imageName
-              } else {
-                outputs.title = `${outputs.imageName} (${outputs.id})`
-              }
-            }
-            outputs.isNativeArch = String(isNativeArch(String(outputs.arch)))
-            for (const key of Object.keys(outputs).sort((first, second) => first.localeCompare(second))) {
-              core.setOutput(key, outputs[key])
-            }
-            core.setOutput('value', JSON.stringify(outputs))
-      - name: getDockerHubTokenLength
-        id: getDockerHubTokenLength
-        uses: jaidlab/action-run-typescript@main
+          options: ${{ toJSON(inputs) }}
+          imageName: ${{ steps.registry.outputs.imageName }}
+          id: ${{ inputs.id }}
+      - id: archive
+        uses: actions/download-artifact@v8.0.2
         with:
-          globals: '{secrets: ${{ toJSON(secrets) }}}'
-          code: |-
-            core.setOutput('value', secrets.dockerHubToken?.length ?? 0)
-      - name: getGithubPackagesRef
-        id: getGithubPackagesRef
-        uses: jaidlab/action-run-typescript@main
+          artifact-ids: ${{ fromJSON(inputs.buildOutput).artifactId }}
+          name: ${{ !fromJSON(inputs.buildOutput).artifactId && fromJSON(inputs.buildOutput).imageArtifact || '' }}
+          path: ${{ runner.temp }}/image
+          merge-multiple: true
+      - uses: docker/login-action@v4.8.0
         with:
-          globals: '{steps: ${{ toJson(steps) }}}'
-          code: |-
-            const inputs = JSON.parse(steps.getInputs.outputs.value) as {
-              buildImageName: string
-              githubRegistry: string
-            }
-            if (!github.repository) {
-              throw new Error('Missing required github.repository value.')
-            }
-            core.setOutput('value', `${inputs.githubRegistry}/${github.repository.toLowerCase()}/${inputs.buildImageName}`)
-      - name: getDockerHubRef
-        id: getDockerHubRef
-        if: ${{ steps.getDockerHubTokenLength.outputs.value > 0 }}
-        uses: jaidlab/action-run-typescript@main
+          registry: ${{ inputs.githubRegistry }}
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - if: env.HUB_ENABLED == 'true'
+        uses: docker/login-action@v4.8.0
         with:
-          globals: '{steps: ${{ toJson(steps) }}}'
-          code: |-
-            const inputs = JSON.parse(steps.getInputs.outputs.value) as {
-              dockerHubRegistry: string
-              dockerHubUser?: string
-              imageSlug: string
-            }
-            const [slugUser, slugRepo] = inputs.imageSlug.split('/')
-            const user = inputs.dockerHubUser || slugUser
-            const repository = `${user}/${slugRepo}`
-            core.setOutput('repository', repository)
-            core.setOutput('value', `${inputs.dockerHubRegistry}/${repository}`)
-      - name: getRefs
-        id: getRefs
-        uses: jaidlab/action-run-typescript@main
-        with:
-          globals: '{steps: ${{ toJson(steps) }}}'
-          code: |-
-            const references = [steps.getGithubPackagesRef.outputs.value]
-            if (steps.getDockerHubRef.outputs.value) {
-              references.push(steps.getDockerHubRef.outputs.value)
-            }
-            core.setOutput('value', references.join('\n'))
-      - name: prepareVersionTag
-        id: prepareVersionTag
-        uses: jaidlab/action-run-typescript@main
-        with:
-          globals: '{steps: ${{ toJson(steps) }}}'
-          code: |-
-            const inputs = JSON.parse(steps.getInputs.outputs.value) as {
-              versionTag?: string | null
-              versionTagSemverPrefix?: string | null
-            }
-            const getCleanedVersionTag = (tag?: string | null) => {
-              if (!tag) {
-                return ''
-              }
-              if (!inputs.versionTagSemverPrefix) {
-                return tag
-              }
-              const semver = /(?<versionPrefix>v?)(?<version>\d+\.\d+\.\d+)/.exec(tag)?.groups
-              if (semver) {
-                return `${inputs.versionTagSemverPrefix}${semver.version}`
-              }
-              return tag
-            }
-            core.setOutput('value', getCleanedVersionTag(inputs.versionTag))
-      - name: getTags
-        id: getTags
-        uses: jaidlab/action-run-typescript@main
-        with:
-          globals: '{steps: ${{ toJson(steps) }}}'
-          code: |-
-            type Inputs = {
-              addScheduleTags?: boolean
-              addShaTags?: boolean
-              addVersionTag?: boolean
-              additionalTags?: string | null
-              baseTags?: string | null
-              versionTagPrefix?: string | null
-            }
-
-            const inputs = JSON.parse(steps.getInputs.outputs.value) as Inputs
-            const versionTag = steps.prepareVersionTag.outputs.value
-            const tags: string[] = []
-            const add = (input?: string | string[] | null) => {
-              if (!input) {
-                return
-              }
-              const addition = typeof input === 'string' ? input.split('\n') : input
-              for (const tag of addition) {
-                if (tag) {
-                  tags.push(tag.trim())
-                }
-              }
-            }
-            add(inputs.baseTags)
-            add(inputs.additionalTags)
-            if (versionTag) {
-              add(`type=raw,value=${versionTag}`)
-            }
-            if (inputs.addVersionTag) {
-              add(`type=pep440,pattern=${inputs.versionTagPrefix ?? ''}{{version}}`)
-            }
-            if (inputs.addShaTags) {
-              add('type=sha,format=long')
-            }
-            if (inputs.addScheduleTags) {
-              add('type=schedule,pattern=nightly')
-              add(`type=schedule,pattern={{date 'YYYYMMDD'}}`)
-            }
-            if (!tags.length) {
-              throw new Error('No tags given')
-            }
-            core.setOutput('value', tags.join('\n'))
-      - name: login (${{ steps.getInputs.outputs.dockerHubUser }} @ ${{ steps.getInputs.outputs.dockerHubRegistry }})
-        if: ${{ steps.getDockerHubTokenLength.outputs.value > 0 }}
-        uses: docker/login-action@v4.1.0
-        with:
-          username: ${{ steps.getInputs.outputs.dockerHubUser }}
+          registry: ${{ inputs.dockerHubRegistry }}
+          username: ${{ steps.registry.outputs.imageUser }}
           password: ${{ secrets.dockerHubToken }}
-      - name: login (${{ github.repository_owner }} @ ${{ steps.getInputs.outputs.githubRegistry }})
-        uses: docker/login-action@v4.1.0
+      - id: publish
+        env:
+          IMAGES: ${{ steps.registry.outputs.images }}
+          IMAGE_PATH: ${{ steps.archive.outputs.download-path }}/${{ fromJSON(inputs.buildOutput).imageFile }}
+          TAG_NAMES: ${{ inputs.useBuildTags && fromJSON(inputs.buildOutput).tagNames || steps.metadata.outputs.tagNames }}
+          BUILD_META: ${{ fromJSON(inputs.buildOutput).meta }}
+        run: bun "$WORKFLOWS_PATH/src/docker/publish.ts"
+      - if: env.HUB_ENABLED == 'true' && inputs.dockerHubRegistry == 'docker.io' && inputs.readmePath != ''
+        uses: actions/checkout@v7.0.1
         with:
-          registry: ${{ steps.getInputs.outputs.githubRegistry }}
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: extractDockerMetadata
-        id: extractDockerMetadata
-        uses: docker/metadata-action@v6.0.0
-        with:
-          images: ${{ steps.getRefs.outputs.value }}
-          labels: |
-            maintainer=${{ github.repository_owner }}
-            org.opencontainers.image.vendor=${{ github.repository_owner }}
-            org.opencontainers.image.title=${{ steps.getInputs.outputs.title }}
-          tags: ${{ steps.getTags.outputs.value }}
-          flavor: |
-            latest=${{ steps.getInputs.outputs.flavorLatest }}
-            prefix=${{ steps.getInputs.outputs.flavorPrefix && format('{0}{1}', steps.getInputs.outputs.flavorPrefix, steps.getInputs.outputs.flavorConnectionString) || '' }}
-            suffix=${{ steps.getInputs.outputs.flavorSuffix && format('{0}{1}', steps.getInputs.outputs.flavorConnectionString, steps.getInputs.outputs.flavorSuffix) || '' }}
-      - name: setupQemu
-        if: ${{ steps.getInputs.outputs.isNativeArch != 'true' }}
-        uses: docker/setup-qemu-action@v4.0.0
-      - name: setupBuildx
-        uses: docker/setup-buildx-action@v4.0.0
-        with:
-          platforms: ${{ steps.getInputs.outputs.arch }}
-      - name: dockerPush
-        id: dockerPush
-        uses: docker/build-push-action@v7.0.0
-        with:
-          push: true
-          platforms: ${{ steps.getInputs.outputs.arch }}
-          tags: ${{ steps.extractDockerMetadata.outputs.tags }}
-          labels: ${{ steps.extractDockerMetadata.outputs.labels }}
-          cache-from: ${{ fromJson(steps.getInputs.outputs.buildInputs).cacheHint }}
-          context: ${{ steps.getInputs.outputs.buildContext }}
-          build-args: ${{ steps.getInputs.outputs.buildBuildArgs }}
-      - name: updateDockerHubDescription
-        if: ${{ steps.getDockerHubTokenLength.outputs.value > 0 && steps.getInputs.outputs.readmePath != '' && hashFiles(steps.getInputs.outputs.readmePath) != '' }}
+          persist-credentials: false
+      - if: env.HUB_ENABLED == 'true' && inputs.dockerHubRegistry == 'docker.io' && inputs.readmePath != '' && hashFiles(inputs.readmePath) != ''
         uses: peter-evans/dockerhub-description@v5.0.0
         with:
-          username: ${{ steps.getInputs.outputs.dockerHubUser }}
+          username: ${{ steps.registry.outputs.imageUser }}
           password: ${{ secrets.dockerHubToken }}
-          repository: ${{ steps.getDockerHubRef.outputs.repository }}
-          readme-filepath: ${{ steps.getInputs.outputs.readmePath }}
+          repository: ${{ steps.registry.outputs.hubRepository }}
+          readme-filepath: ${{ inputs.readmePath }}

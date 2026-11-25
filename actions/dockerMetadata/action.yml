@@ -1,0 +1,41 @@
+name: Docker metadata
+description: Resolve tag rules, flavor names and OCI labels for one image.
+inputs:
+  options:
+    description: Docker release inputs as JSON
+    default: '{}'
+  imageName:
+    description: resolved build image name
+    required: true
+  id:
+    description: matrix ID
+    default: default
+  flavorSuffix:
+    description: matrix flavor overriding the configured suffix
+    default: ''
+outputs:
+  labels:
+    description: OCI labels to bake into the image
+    value: ${{ steps.meta.outputs.labels }}
+  tagNames:
+    description: newline-separated tags without registry or image name
+    value: ${{ steps.meta.outputs.tag-names }}
+runs:
+  using: composite
+  steps:
+    - id: rules
+      shell: bash
+      env:
+        WORKFLOW_INPUTS: ${{ toJSON(inputs) }}
+      run: bun "$GITHUB_ACTION_PATH/rules.ts"
+    - id: meta
+      uses: docker/metadata-action@v6.2.0
+      env:
+        DOCKER_METADATA_SET_OUTPUT_ENV: 'false'
+      with:
+        tags: ${{ steps.rules.outputs.tags }}
+        flavor: ${{ steps.rules.outputs.flavor }}
+        labels: |
+          maintainer=${{ github.repository_owner }}
+          org.opencontainers.image.vendor=${{ github.repository_owner }}
+          org.opencontainers.image.title=${{ steps.rules.outputs.title }}
