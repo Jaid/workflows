@@ -85,9 +85,12 @@ If the build job already uploads `dist/` as an artifact named `build`, the entir
 | `basePath` / `route` | `/` / `/` | Where the app was built to be mounted and which app route to open. For example, `/docs/` + `/guide?lang=en#install` opens `/docs/guide?lang=en#install`. |
 | `captureOptions` | `{}` | JSON options: `width`, `height`, `deviceScaleFactor`, `fullPage`, `omitBackground`, `format` (`png`, `webp` or `jpeg`), `quality`, `colorScheme`, `motion`, `mediaType`, `wait`, `delay`, `timeout` and `toolCalls`. Defaults include 1920×1080, PNG and `networkidle2`. Use `{"wait":{"selector":"#ready"}}` for hydrated content or `{"wait":"three"}` for visible canvas output. |
 | `imageName` | `screenshot` | Filename stem. Give each capture a distinct name; reruns add the attempt number. |
-| `publishPreview` | `false` | On a public repository’s push or manual run, append the image to the caller’s `ci-screenshots` branch and embed it inline in the run summary. This needs `contents: write` on the caller job. Only the separate preview job gets that permission. |
+| `storageBranch` | none | On a public repository’s push or manual run, append the image to this branch in the caller’s repository (creating it if needed) and embed it in the run summary. This requires `contents: write` on the calling job. |
+| `webhook` | none | HTTP(S) URL that receives a `POST` with one `multipart/form-data` field named `file`, containing the screenshot’s original bytes, filename and image MIME type. The endpoint must return a 2xx status. |
 
 The run summary links directly to the single-file image artifact. It opens for signed-in readers until the repository’s artifact retention expires. An opt-in public preview uses an immutable raw image URL and stays available independently of artifact retention. Outputs are `artifactId`, `artifactUrl`, `imageFile` and `previewUrl` (empty when unpublished).
+
+Branch storage and webhook delivery run independently after the artifact upload. A webhook alone needs only `contents: read`. For a URL containing a token, pass `secrets: {webhook: "${{ secrets.SCREENSHOT_WEBHOOK }}"}` on the calling job; it takes precedence over `with.webhook`.
 
 For a gallery of routes or viewports, use a caller matrix over the same build:
 
@@ -106,7 +109,8 @@ For a gallery of routes or viewports, use a caller matrix over the same build:
       imageName: ${{ matrix.name }}
       route: ${{ matrix.route }}
       captureOptions: '{"width":${{ matrix.width }},"height":${{ matrix.height }},"format":"webp"}'
-      publishPreview: true
+      storageBranch: previews/spa
+      webhook: ${{ vars.SCREENSHOT_WEBHOOK }}
 ```
 
 ## Docker images

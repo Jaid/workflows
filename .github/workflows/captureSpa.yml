@@ -29,9 +29,15 @@ on:
         type: string
         default: '{}'
         description: JSON screenshot options for capture-page, including viewport and readiness
-      publishPreview:
-        type: boolean
-        description: keep a public inline preview on the ci-screenshots branch on pushes and manual runs
+      storageBranch:
+        type: string
+        description: branch in the caller’s repository for public inline previews on pushes and manual runs
+      webhook:
+        type: string
+        description: HTTP(S) endpoint to POST the screenshot to as a multipart file
+    secrets:
+      webhook:
+        description: optional private webhook URL, taking precedence over the webhook input
     outputs:
       artifactId:
         value: ${{ jobs.capture.outputs.artifactId }}
@@ -51,6 +57,7 @@ jobs:
       artifactId: ${{ steps.upload.outputs.artifact-id }}
       artifactUrl: ${{ steps.upload.outputs.artifact-url }}
       imageFile: ${{ steps.snap.outputs.imageFile }}
+      hasWebhook: ${{ secrets.webhook != '' || inputs.webhook != '' }}
     steps:
       - uses: $/
       - name: Install capture-page
@@ -68,7 +75,11 @@ jobs:
       - name: Capture the built site
         id: snap
         env:
-          WORKFLOW_INPUTS: ${{ toJSON(inputs) }}
+          SITE_DIRECTORY: ${{ inputs.siteDirectory }}
+          BASE_PATH: ${{ inputs.basePath }}
+          ROUTE: ${{ inputs.route }}
+          IMAGE_NAME: ${{ inputs.imageName }}
+          CAPTURE_OPTIONS: ${{ inputs.captureOptions }}
         run: bun "$WORKFLOWS_PATH/src/spa/capture.ts" "$RUNNER_TEMP/spa-build" "$RUNNER_TEMP/screenshots"
       - id: upload
         uses: actions/upload-artifact@v7.0.2
@@ -83,7 +94,7 @@ jobs:
         run: printf '### SPA screenshot\n\n[Open %s](%s)\n' "$IMAGE_FILE" "$IMAGE_URL" >> "$GITHUB_STEP_SUMMARY"
   preview:
     needs: capture
-    if: inputs.publishPreview && github.event.repository.visibility == 'public' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: inputs.storageBranch != '' && github.event.repository.visibility == 'public' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Inherit contents: write only when the caller opts into publication. The browser job is always read-only.
@@ -101,6 +112,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           IMAGE_FILE: ${{ needs.capture.outputs.imageFile }}
+          STORAGE_BRANCH: ${{ inputs.storageBranch }}
         run: |
           gh auth setup-git --hostname github.com
           bun "$WORKFLOWS_PATH/src/spa/preview.ts" "$RUNNER_TEMP/preview/$IMAGE_FILE"
@@ -109,3 +121,23 @@ jobs:
           IMAGE_URL: ${{ steps.publish.outputs.previewUrl }}
           IMAGE_FILE: ${{ needs.capture.outputs.imageFile }}
         run: printf '### SPA preview\n\n![%s](%s)\n' "$IMAGE_FILE" "$IMAGE_URL" >> "$GITHUB_STEP_SUMMARY"
+  webhook:
+    needs: capture
+    if: needs.capture.outputs.hasWebhook == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: $/
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          artifact-ids: ${{ needs.capture.outputs.artifactId }}
+          path: ${{ runner.temp }}/webhook
+          merge-multiple: true
+          skip-decompress: true
+      - name: POST the screenshot
+        env:
+          WEBHOOK: ${{ secrets.webhook || inputs.webhook }}
+          IMAGE_FILE: ${{ needs.capture.outputs.imageFile }}
+        run: bun "$WORKFLOWS_PATH/src/spa/webhook.ts" "$RUNNER_TEMP/webhook/$IMAGE_FILE"

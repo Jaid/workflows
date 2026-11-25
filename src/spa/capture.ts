@@ -1,6 +1,6 @@
 import path from 'node:path'
 import capturePage, {type Options} from 'capture-page'
-import {readInputs, setOutputs} from '../actions.ts'
+import {setOutputs} from '../actions.ts'
 import {serveSpa} from './serve.ts'
 
 type Inputs = {siteDirectory: string, basePath: string, route: string, imageName: string, captureOptions: string}
@@ -27,6 +27,9 @@ export async function captureSpa(inputs: Inputs, artifact: string, output: strin
 }
 
 if (import.meta.main) {
-  const imageFile = await captureSpa(readInputs<Inputs>(), process.argv[2], process.argv[3], process.env.GITHUB_RUN_ATTEMPT)
+  const imageFile = await captureSpa({
+    siteDirectory: process.env.SITE_DIRECTORY!, basePath: process.env.BASE_PATH!, route: process.env.ROUTE!,
+    imageName: process.env.IMAGE_NAME!, captureOptions: process.env.CAPTURE_OPTIONS!,
+  }, process.argv[2], process.argv[3], process.env.GITHUB_RUN_ATTEMPT)
   setOutputs({imageFile})
 }

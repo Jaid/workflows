@@ -2,13 +2,13 @@ import {mkdtemp} from 'node:fs/promises'
 import path from 'node:path'
 import {setOutputs} from '../actions.ts'
 
-const ref = 'refs/heads/ci-screenshots'
-
 // Append one image without checking out previous captures. Never force-push: other matrix entries may publish concurrently.
-export async function publishPreview(remote: string, image: string, runId: string, temp: string) {
+export async function publishPreview(remote: string, storageBranch: string, image: string, runId: string, temp: string) {
   const cwd = await mkdtemp(path.join(temp, 'spa-preview-'))
   const git = async (...args: string[]) => (await Bun.$`git ${args}`.cwd(cwd).text()).trim()
   await git('init', '--quiet')
+  await git('check-ref-format', '--branch', storageBranch)
+  const ref = `refs/heads/${storageBranch}`
   await git('remote', 'add', 'origin', remote)
   await git('config', 'user.name', 'github-actions[bot]')
   await git('config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
@@ -36,6 +36,6 @@ export async function publishPreview(remote: string, image: string, runId: strin
 
 if (import.meta.main) {
   const repo = process.env.GITHUB_REPOSITORY!
-  const {commit, file} = await publishPreview(`${process.env.GITHUB_SERVER_URL}/${repo}.git`, process.argv[2], process.env.GITHUB_RUN_ID!, process.env.RUNNER_TEMP!)
+  const {commit, file} = await publishPreview(`${process.env.GITHUB_SERVER_URL}/${repo}.git`, process.env.STORAGE_BRANCH!, process.argv[2], process.env.GITHUB_RUN_ID!, process.env.RUNNER_TEMP!)
   setOutputs({previewUrl: `https://raw.githubusercontent.com/${repo}/${commit}/${file}`})
 }
