@@ -3,20 +3,20 @@ import {setOutputs} from '../../src/actions.ts'
 
 type Manifest = {name?: string, version?: string, private?: boolean}
 
-export async function packRelease(directory: string, tag: string, archive: string) {
+export async function packPackage(directory: string, archive: string, {tag, runScripts = false}: {tag?: string, runScripts?: boolean} = {}) {
   const validate = (pkg: Manifest) => {
-    if (pkg.private || !pkg.name || !pkg.version || `v${pkg.version}` !== tag) throw new Error(`Cannot publish ${pkg.name}@${pkg.version} for ${tag}.`)
-    return pkg.name
+    if (pkg.private || !pkg.name || !pkg.version || (tag !== undefined && `v${pkg.version}` !== tag)) throw new Error(`Cannot publish ${pkg.name}@${pkg.version}${tag ? ` for ${tag}` : ''}.`)
+    return {name: pkg.name, version: pkg.version}
   }
-  const name = validate(await Bun.file(path.join(directory, 'package.json')).json())
-  await Bun.$`bun run --if-present prepublishOnly`.cwd(directory)
-  await Bun.$`bun pm pack --filename ${archive}`.cwd(directory)
+  const source = validate(await Bun.file(path.join(directory, 'package.json')).json())
+  if (runScripts) await Bun.$`bun run --if-present prepublishOnly`.cwd(directory)
+  await Bun.$`bun pm pack ${runScripts ? [] : ['--ignore-scripts']} --filename ${archive}`.cwd(directory)
   const packed = validate(await Bun.$`tar -xOzf ${archive} package/package.json`.json())
-  if (packed !== name) throw new Error(`Package name changed during packing: ${name} → ${packed}`)
-  return name
+  if (packed.name !== source.name || packed.version !== source.version) throw new Error('Package name or version changed during packing')
+  return packed.name
 }
 
 if (import.meta.main) {
-  const name = await packRelease(path.resolve(process.env.PACKAGE_DIRECTORY!), process.env.RELEASE_TAG!, path.join(process.env.RUNNER_TEMP!, 'package.tgz'))
+  const name = await packPackage(path.resolve(process.env.PACKAGE_DIRECTORY!), path.join(process.env.RUNNER_TEMP!, 'package.tgz'), {tag: process.env.RELEASE_TAG!, runScripts: true})
   setOutputs({artifact: `npm-${name.replaceAll('/', '-')}-${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT}`})
 }

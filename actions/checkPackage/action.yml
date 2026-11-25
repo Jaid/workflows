@@ -13,6 +13,11 @@ inputs:
   ref:
     description: caller ref (defaults to the event commit)
     default: ''
+  artifactId:
+    description: immutable ID of a build directory artifact to restore before checking the package
+  distDirectory:
+    description: build output directory in the caller’s checkout
+    default: dist
   releaseTag:
     description: if set, pack and verify this tagged version after the checks
     default: ''
@@ -20,13 +25,17 @@ inputs:
     description: directory containing the package to pack
     default: .
 outputs:
+  sourceSha:
+    description: exact commit checked out for this job
+    value: ${{ steps.source.outputs.commit }}
   artifact:
     description: artifact name for the packed release tarball
     value: ${{ steps.pack.outputs.artifact }}
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v7.0.1
+    - id: source
+      uses: actions/checkout@v7.0.1
       with:
         ref: ${{ inputs.ref }}
         persist-credentials: false
@@ -35,7 +44,22 @@ runs:
         bun-version: ${{ inputs.bunVersion }}
         no-cache: ${{ inputs.releaseTag != '' }}
     - shell: bash
-      run: bun install --frozen-lockfile
+      run: |
+        bun install --frozen-lockfile
+        printf 'WORKFLOWS_PATH=%s\n' "$GITHUB_ACTION_PATH/../.." >> "$GITHUB_ENV"
+    - id: restore
+      if: inputs.artifactId != ''
+      shell: bash
+      env:
+        ARTIFACT_ID: ${{ inputs.artifactId }}
+        DIST_DIRECTORY: ${{ inputs.distDirectory }}
+      run: bun "$WORKFLOWS_PATH/src/buildArtifact.ts" restore
+    - if: inputs.artifactId != ''
+      uses: actions/download-artifact@v8.0.2
+      with:
+        artifact-ids: ${{ inputs.artifactId }}
+        path: ${{ steps.restore.outputs.directory }}
+        merge-multiple: true
     - shell: bash
       env:
         RUN_LINT: ${{ inputs.lint }}

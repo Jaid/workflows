@@ -1,0 +1,78 @@
+name: buildArtifact
+on:
+  workflow_call:
+    inputs:
+      scripts:
+        type: string
+        default: build
+        description: package build scripts in execution order, one per line
+      distDirectory:
+        type: string
+        default: dist
+        description: build output directory relative to the checkout
+      artifactName:
+        type: string
+        default: build
+        description: unique build artifact name within the run (reruns append the attempt)
+      packageDirectory:
+        type: string
+        description: also pack the npm package in this directory without executing lifecycle scripts
+      ref:
+        type: string
+        description: caller ref to build (defaults to the event commit or bumped release tag)
+      bunVersion:
+        type: string
+      runner:
+        type: string
+        default: ubuntu-latest
+    outputs:
+      artifactId:
+        value: ${{ jobs.build.outputs.artifactId }}
+      sourceSha:
+        value: ${{ jobs.build.outputs.sourceSha }}
+      distDirectory:
+        value: ${{ jobs.build.outputs.distDirectory }}
+      packageArtifactId:
+        value: ${{ jobs.build.outputs.packageArtifactId }}
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ${{ inputs.runner }}
+    outputs:
+      artifactId: ${{ steps.dist.outputs.artifact-id }}
+      sourceSha: ${{ steps.build.outputs.sourceSha }}
+      distDirectory: ${{ inputs.distDirectory }}
+      packageArtifactId: ${{ steps.pkg.outputs.artifact-id }}
+    steps:
+      - name: Install dependencies and build
+        id: build
+        uses: $/actions/checkPackage
+        with:
+          bunVersion: ${{ inputs.bunVersion }}
+          ref: ${{ inputs.ref || (github.event_name == 'repository_dispatch' && github.event.action == 'bumped' && format('refs/tags/{0}', github.event.client_payload.newTag)) || '' }}
+          lint: 'false'
+          scripts: ${{ inputs.scripts || 'build' }}
+      - name: Collect the built files
+        id: files
+        shell: bash
+        env:
+          DIST_DIRECTORY: ${{ inputs.distDirectory }}
+          PACKAGE_DIRECTORY: ${{ inputs.packageDirectory }}
+        run: bun "$WORKFLOWS_PATH/src/buildArtifact.ts" collect
+      - id: dist
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: ${{ github.run_attempt == '1' && inputs.artifactName || format('{0}-{1}', inputs.artifactName, github.run_attempt) }}
+          path: ${{ steps.files.outputs.directory }}
+          include-hidden-files: true
+          if-no-files-found: error
+      - id: pkg
+        if: inputs.packageDirectory != ''
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: ${{ format('{0}-npm-{1}', inputs.artifactName, github.run_attempt) }}
+          path: ${{ runner.temp }}/package.tgz
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7

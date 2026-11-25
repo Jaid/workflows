@@ -16,6 +16,16 @@ on:
         type: string
         default: test
         description: package scripts in execution order, one per line
+      artifactId:
+        type: string
+        description: same-run build artifact to restore before running checks
+      distDirectory:
+        type: string
+        default: dist
+        description: destination for the built files, relative to the checkout
+      ref:
+        type: string
+        description: source revision for the checks, e.g. the build’s sourceSha
 jobs:
   check:
     runs-on: ${{ inputs.runner }}
@@ -27,3 +37,6 @@ jobs:
           bunVersion: ${{ inputs.bunVersion }}
           lint: ${{ inputs.lint }}
           scripts: ${{ inputs.scripts }}
+          ref: ${{ inputs.ref }}
+          artifactId: ${{ inputs.artifactId }}
+          distDirectory: ${{ inputs.distDirectory }}

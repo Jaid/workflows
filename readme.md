@@ -27,8 +27,60 @@ This installs dependencies once with `bun install --frozen-lockfile`, runs the p
 | `lint` | `true` | Set to `false` for test-only jobs or to put a custom `lint` script in the ordered list. |
 | `bunVersion` | auto | Override the version for this job. |
 | `runner` | `ubuntu-latest` | A runner label; a caller matrix can pass `${{ matrix.os }}`. |
+| `artifactId` / `distDirectory` | none / `dist` | Restore one immutable build artifact into this directory after installing dependencies and before running checks. Replaces any files already in the output directory. |
+| `ref` | event commit | Source revision to check out. Pass the producer’s `sourceSha` when checking a shared build. |
 
 If branch protection requires separate lint and test checks, keep the two caller jobs: pass `scripts: ''` to the lint job and `lint: false` to the test job.
+
+## Build once for separate checks
+
+[`buildArtifact.yml`](.github/workflows/buildArtifact.yml) installs dependencies, runs `bun run build` and uploads the contents of `dist/`. It adds no lint or test commands. Lint and test can then run in parallel, with the same source revision and the same built files. Each check still installs its own dependencies on its runner.
+
+```yaml
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+  repository_dispatch: {types: [bumped]}
+permissions:
+  contents: read
+jobs:
+  buildArtifact:
+    uses: Jaid/workflows/.github/workflows/buildArtifact.yml@main
+    with:
+      packageDirectory: ${{ (github.ref_type == 'tag' || github.event_name == 'repository_dispatch') && '.' || '' }}
+  lint:
+    needs: buildArtifact
+    uses: Jaid/workflows/.github/workflows/bunCi.yml@main
+    with:
+      artifactId: ${{ needs.buildArtifact.outputs.artifactId }}
+      ref: ${{ needs.buildArtifact.outputs.sourceSha }}
+      scripts: ''
+  test:
+    needs: buildArtifact
+    uses: Jaid/workflows/.github/workflows/bunCi.yml@main
+    with:
+      artifactId: ${{ needs.buildArtifact.outputs.artifactId }}
+      ref: ${{ needs.buildArtifact.outputs.sourceSha }}
+      lint: false
+  publish:
+    needs: [buildArtifact, lint, test]
+    if: needs.buildArtifact.outputs.packageArtifactId != ''
+    uses: Jaid/workflows/.github/workflows/publishPackage.yml@main
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      packageArtifactId: ${{ needs.buildArtifact.outputs.packageArtifactId }}
+```
+
+For an SPA, `captureSpa.yml` can also take `needs.buildArtifact.outputs.artifactId` in parallel with the checks. The ID is scoped to this workflow run. A later release run builds its own tagged revision. If a check should exercise the compiled output, its script must read `dist/` without invoking the build again.
+
+The builder accepts `scripts` (default `build`), `distDirectory` (default `dist`), `artifactName` (default `build`), `ref`, `runner` and `bunVersion`. Use a dedicated output directory containing regular files and directories; dotfiles are included. For a custom output location, pass `distDirectory: ${{ needs.buildArtifact.outputs.distDirectory }}` to the checks. Give separate builds within a run distinct artifact names. On a `bumped` dispatch the builder checks out the release tag; its `sourceSha` always identifies the exact checkout.
+
+`packageDirectory` is optional. When set, the builder also packs a `package.tgz` from that directory without running publish or pack hooks. Use `.` for a publishable root manifest whose `files` includes the build, or `dist` for a generated `dist/package.json`. A site that only needs screenshots can omit both this input and the publish job.
 
 ## Publish a package
 
@@ -50,6 +102,8 @@ jobs:
 Configure an [npm trusted publisher](https://docs.npmjs.com/trusted-publishers/) for the **caller’s** owner, repository and workflow filename, with direct `npm publish` enabled. For existing token-based projects, add `secrets: {npmToken: "${{ secrets.npmToken }}"}` to the calling job instead of configuring a trusted publisher. Keep the permissions shown in either case.
 
 The read-only job installs, runs `scripts` (default `test`), runs `prepublishOnly` if present and packs with Bun, including its pack hooks and workspace version resolution. Both the source and packed manifest must be publishable and match `v<version>`. A separate job downloads that exact tarball by artifact ID and runs `npm publish` with lifecycle scripts disabled. The npm credential is only used in that job.
+
+When the caller passes `packageArtifactId` from `buildArtifact.yml`, publishing skips the checkout, installation, tests and packing. It checks the manifest in the downloaded tarball against the release tag before publishing. Use `needs` on the caller’s publish job to require the lint and test results, as in the [build-once example](#build-once-for-separate-checks).
 
 For a generated distribution, add the following to the calling job:
 
